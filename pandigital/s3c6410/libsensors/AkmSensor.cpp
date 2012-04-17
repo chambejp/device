@@ -44,7 +44,7 @@ AkmSensor::AkmSensor()
     mPendingEvents[Accelerometer].type = SENSOR_TYPE_ACCELEROMETER;
     mPendingEvents[Accelerometer].acceleration.status = SENSOR_STATUS_ACCURACY_HIGH;
 
-/*   mPendingEvents[MagneticField].version = sizeof(sensors_event_t);
+ /*   mPendingEvents[MagneticField].version = sizeof(sensors_event_t);
     mPendingEvents[MagneticField].sensor = ID_M;
     mPendingEvents[MagneticField].type = SENSOR_TYPE_MAGNETIC_FIELD;
     mPendingEvents[MagneticField].magnetic.status = SENSOR_STATUS_ACCURACY_HIGH;
@@ -60,27 +60,23 @@ AkmSensor::AkmSensor()
 
     // read the actual value of all sensors if they're enabled already
     struct input_absinfo absinfo;
-
     short flags = 0;
 
     open_device();
 
-   // if (!ioctl(dev_fd, ECS_IOCTL_APP_GET_AFLAG, &flags)) {
-     //   if (flags)  {
-{{
-         mEnabled |= 1<<Accelerometer;
+    if (!ioctl(dev_fd, ECS_IOCTL_APP_GET_AFLAG, &flags)) {
+        if (flags)  {
+
+            mEnabled |= 1<<Accelerometer;
             if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_ACCEL_X), &absinfo)) {
                 mPendingEvents[Accelerometer].acceleration.x = absinfo.value * CONVERT_A_X;
-		LOGE("Absolute value? %d",EVENT_TYPE_ACCEL_X);
-            }LOGE("chambejp accel: x accel %d",absinfo.value);
+            }
 mPendingEvents[Accelerometer].acceleration.x =  -39.2266 * CONVERT_A_X;
 
             if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_ACCEL_Y), &absinfo)) {
-
                 mPendingEvents[Accelerometer].acceleration.y = absinfo.value * CONVERT_A_Y;
             }
-LOGE("chambejp accel: y accel %d",absinfo.value); 
-mPendingEvents[Accelerometer].acceleration.y = 0.0 * CONVERT_A_Y;
+ mPendingEvents[Accelerometer].acceleration.y = 0.0 * CONVERT_A_Y;
 
             if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_ACCEL_Z), &absinfo)) {
                 mPendingEvents[Accelerometer].acceleration.z = absinfo.value * CONVERT_A_Z;
@@ -107,33 +103,33 @@ mPendingEvents[Accelerometer].acceleration.z = 0.0 * CONVERT_A_Z;
 //    if (!ioctl(dev_fd, ECS_IOCTL_APP_GET_MFLAG, &flags)) {
 //        if (flags)  {
 {{
-    LOGE("trm AkmSensor: get org status flags %x",flags);
+//    LOGE("trm AkmSensor: get org status flags %x",flags);
             mEnabled |= 1<<Orientation;
 
             if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_YAW), &absinfo)) {
                 mPendingEvents[Orientation].orientation.azimuth = absinfo.value;
             }
 mPendingEvents[Orientation].orientation.azimuth = 0.0;
-    LOGE("trm AkmSensor: get org YAW %d",absinfo.value);
+  //  LOGE("trm AkmSensor: get org YAW %x",absinfo.value);
 
             if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_PITCH), &absinfo)) {
                 mPendingEvents[Orientation].orientation.pitch = absinfo.value;
             }
 mPendingEvents[Orientation].orientation.pitch = 0.0;
-    LOGE("trm AkmSensor: get org PITCH %x",absinfo.value);
+ //   LOGE("trm AkmSensor: get org PITCH %x",absinfo.value);
  
 
            if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_ROLL), &absinfo)) {
                 mPendingEvents[Orientation].orientation.roll = -absinfo.value;
             }
 mPendingEvents[Orientation].orientation.roll = -90.0;
-    LOGE("trm AkmSensor: get org ROLL %x",absinfo.value);
+//    LOGE("trm AkmSensor: get org ROLL %x",absinfo.value);
 
 
             if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_ORIENT_STATUS), &absinfo)) {
                 mPendingEvents[Orientation].orientation.status = uint8_t(absinfo.value & SENSOR_STATE_MASK);
             }
-    LOGE("trm AkmSensor: get org STATUS %x",absinfo.value);
+ //   LOGE("trm AkmSensor: get org STATUS %x",absinfo.value);
         }
     }
 
@@ -176,15 +172,15 @@ int AkmSensor::enable(int32_t handle, int en)
         }
         short flags = newState;
         //trm err = ioctl(dev_fd, cmd, &flags);
-        err = err < 0 ? -errno : 0;
+        err = err<0 ? -errno : 0;
 	//err = 0; // trm
-        LOGE_IF(err, "ECS_IOCTL_APP_SET_XXX failed (%s)", strerror(-err));
+ //       LOGE_IF(err, "ECS_IOCTL_APP_SET_XXX failed (%s)", strerror(-err));
         if (!err) {
             mEnabled &= ~(1<<what);
             mEnabled |= (uint32_t(flags)<<what);
-    LOGE("trm AkmSensor: mEnabled STATUS %x",mEnabled);
+ //   LOGE("trm AkmSensor: mEnabled STATUS %x",mEnabled);
             mEnabled |= (1<<what); // trm
-    LOGE("trm AkmSensor: mEnabled STATUS %x",mEnabled);
+ //   LOGE("trm AkmSensor: mEnabled STATUS %x",mEnabled);
 
 // trm            update_delay();
         }
@@ -198,7 +194,7 @@ int AkmSensor::enable(int32_t handle, int en)
 int AkmSensor::setDelay(int32_t handle, int64_t ns)
 {
 #ifdef ECS_IOCTL_APP_SET_DELAY
-    LOGE("trm AkmSensor: setDelay");
+ //   LOGE("trm AkmSensor: setDelay ns:%llx ",ns);
     int what = -1;
     switch (handle) {
         case ID_A: what = Accelerometer; break;
@@ -222,7 +218,6 @@ int AkmSensor::setDelay(int32_t handle, int64_t ns)
 int AkmSensor::update_delay()
 {
     if (mEnabled) {
-    LOGE("trm AkmSensor: update_delay");
         uint64_t wanted = -1LLU;
         for (int i=0 ; i<numSensors ; i++) {
             if (mEnabled & (1<<i)) {
@@ -231,6 +226,7 @@ int AkmSensor::update_delay()
             }
         }
         short delay = int64_t(wanted) / 1000000;
+ //   LOGE("trm AkmSensor: update_delayns:%x , %d",delay,delay);
         /* trm  if (ioctl(dev_fd, ECS_IOCTL_APP_SET_DELAY, &delay)) {
             return -errno;
         }*/
@@ -242,6 +238,8 @@ int AkmSensor::readEvents(sensors_event_t* data, int count)
 {
     if (count < 1)
         return -EINVAL;
+
+//LOGE    ("trm AkmSensor: Count:%d)",count);
 
     ssize_t n = mInputReader.fill(data_fd);
     if (n < 0)
@@ -272,44 +270,43 @@ int AkmSensor::readEvents(sensors_event_t* data, int count)
                 mInputReader.next();
             }
         } else  if (type == EV_KEY) {
-            LOGE    ("trm AkmSensor: KEY event tests(type=%d, code=%d value=%d)",type, event->code, event->value);
-	    mEnabled = 1<<Accelerometer;
-         //   processEvent(EVENT_TYPE_ACCEL_X, (!(event->value & 1)*10.0) * ((event->value >>2)?-1.0 : 1.0) * -1.0);
-           // processEvent(EVENT_TYPE_ACCEL_Y, ( (event->value & 1)*10.0) * ((event->value >>2)?-1.0 : 1.0) * -1.0);
+//            LOGE    ("trm AkmSensor: KEY event (type=%d, code=%d value=%d)",type, event->code, event->value);
 
-             processEvent(EVENT_TYPE_ACCEL_Z, 5);
-switch (event->value) {
-        case 2:  // /\  // 0 degrees Normal Orientation logo to the right Rotation 1
-		processEvent(EVENT_TYPE_ACCEL_X, 2);//734 
-		processEvent(EVENT_TYPE_ACCEL_Y, 1);
-	//	processEvent(EVENT_TYPE_ACCEL_Z, 2);		
+	for (int i=0 ;i<= 2  ; i++) 
+{
+	    mEnabled = 1<<Accelerometer;
+            processEvent(EVENT_TYPE_ACCEL_X, -!(event->value & 1) * ((event->value >>2)?-1 : 1) * 720);
+            processEvent(EVENT_TYPE_ACCEL_Y, - (event->value & 1) * ((event->value >>2)?-1 : 1) * 720);
+            processEvent(EVENT_TYPE_ACCEL_Z, -!(event->value & 6) * ((event->value & 1)?-1 : 1) * 720); 
+
+/*switch (event->value) {
+        case 2:  // /\  //
+		processEvent(EVENT_TYPE_ACCEL_X, 10);//734
+		processEvent(EVENT_TYPE_ACCEL_Y, 0);		
 		//processEvent(EVENT_TYPE_ACCEL_STATUS, event->value);		
 		break;
 
-        case 3: // < 90 degrees logo to right Rotation 2
-		processEvent(EVENT_TYPE_ACCEL_X, 3);
-		processEvent(EVENT_TYPE_ACCEL_Y, 1);//734	
-	//	processEvent(EVENT_TYPE_ACCEL_Z, );		
+        case 3: // <
+		processEvent(EVENT_TYPE_ACCEL_X, 0);
+		processEvent(EVENT_TYPE_ACCEL_Y, -10);	//734	
 		//processEvent(EVENT_TYPE_ACCEL_STATUS, 0);		
 		break;
 
-        case 4: // \/ 180 degrees logo to bottom Rotation 3
-		processEvent(EVENT_TYPE_ACCEL_X, 4);//-639
-		processEvent(EVENT_TYPE_ACCEL_Y, 1);	
-	//	processEvent(EVENT_TYPE_ACCEL_Z, 2);	
+        case 4: // \/
+		processEvent(EVENT_TYPE_ACCEL_X, -10);//-639
+		processEvent(EVENT_TYPE_ACCEL_Y, 0);		
 		//processEvent(EVENT_TYPE_ACCEL_STATUS, event->value);		
 		break;
 
-        case 5: // > 270 degrees logo to right (Current Locked Orientation) Rotation 0
-		processEvent(EVENT_TYPE_ACCEL_X, 1);
-		processEvent(EVENT_TYPE_ACCEL_Y, 1);	//-639	
-	//	processEvent(EVENT_TYPE_ACCEL_Z, 2);
+        case 5: // >
+		processEvent(EVENT_TYPE_ACCEL_X, 0);
+		processEvent(EVENT_TYPE_ACCEL_Y, 10);	//-639	
 		//processEvent(EVENT_TYPE_ACCEL_STATUS, event->value);		
 		break;
 
     	      }
-
-            int64_t time = timevalToNano(event->time);
+*/
+	int64_t time = timevalToNano(event->time) + (i * 200000000);
          for (int j=0 ; count && mPendingMask && j<numSensors ; j++)
 	 //int   j = 0;
 	 {
@@ -320,15 +317,17 @@ switch (event->value) {
                         *data++ = mPendingEvents[j];
                         count--;
                         numEventReceived += 1;
-            LOGE("trm AkmSensor: KEY event should be complete, time:%llx", time);
+//            LOGE("trm AkmSensor: KEY event should be complete, time:%lld X:%f  Y:%f", time,mPendingEvents[Accelerometer].acceleration.x,mPendingEvents[Accelerometer].acceleration.y);
                     }
                 }
-            }	
+            }
+}	
             if (!mPendingMask) {
                 mInputReader.next();
 		}
+   
         } else {
-            LOGE("AkmSensor: unknown event (type=%d, code=%d)",
+ //           LOGE("AkmSensor: unknown event (type=%d, code=%d)",
                     type, event->code);
             mInputReader.next();
         }
@@ -342,16 +341,15 @@ void AkmSensor::processEvent(int code, int value)
     switch (code) {
         case EVENT_TYPE_ACCEL_X:
             mPendingMask |= 1<<Accelerometer;
-            mPendingEvents[Accelerometer].acceleration.x = value;// * CONVERT_A_X ;
-            LOGE("Chambejp EVENT_TYPE_ACCEL_X: value %d", value);
-	    break;
+            mPendingEvents[Accelerometer].acceleration.x = value * CONVERT_A_X ;
+            break;
         case EVENT_TYPE_ACCEL_Y:
             mPendingMask |= 1<<Accelerometer;
-            mPendingEvents[Accelerometer].acceleration.y = value;// * CONVERT_A_Y;
+            mPendingEvents[Accelerometer].acceleration.y = value * CONVERT_A_Y;
             break;
         case EVENT_TYPE_ACCEL_Z:
             mPendingMask |= 1<<Accelerometer;
-            mPendingEvents[Accelerometer].acceleration.z = value;// * CONVERT_A_Z ;
+            mPendingEvents[Accelerometer].acceleration.z = value * CONVERT_A_Z ;
             break;
         case EVENT_TYPE_ACCEL_STATUS:
             mPendingMask |= 1<<Orientation;
