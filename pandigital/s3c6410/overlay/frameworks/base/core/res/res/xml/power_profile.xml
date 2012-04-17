@@ -19,16 +19,16 @@
 
 <device name="Android">
   <item name="none">0</item>
-  <item name="screen.on">49</item>
-  <item name="screen.full">260</item>
+  <item name="screen.on">50</item>
+  <item name="screen.full">300</item>
   <item name="wifi.on">4</item>
   <item name="wifi.active">120</item>
   <item name="wifi.scan">220</item>
   <item name="dsp.audio">88</item>
   <item name="dsp.video">88</item>
-  <item name="radio.active">185</item>
-  <item name="battery.capacity">1500</item>
-  <item name="radio.scanning">88</item>
+  <item name="radio.active">0</item>
+  <item name="battery.capacity">1600</item>
+  <item name="radio.scanning">0</item>
   <array name="radio.on"> <!-- Strength 0 to BINS-1 -->
       <value>3.4</value>
       <value>3.4</value>
@@ -37,7 +37,7 @@
     <value>800000</value>
   </array>
   <!-- Power consumption in suspend -->
-  <item name="cpu.idle">1.4</item>
+  <item name="cpu.idle">10</item>
   <!-- Power consumption due to wake lock held -->
   <item name="cpu.awake">44</item>
   <!-- Power consumption at different speeds -->

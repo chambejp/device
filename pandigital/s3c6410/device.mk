@@ -47,7 +47,8 @@ PRODUCT_PACKAGES := \
 	hwcomposer.default \
 	gralloc.s3c6410 \
 	copybit.s3c6410 \
-	libGLES_fimg	\
+        sensors.s3c6410.so \
+	libGLES_fimg
 
 
 #PRODUCT_PROPERTY_OVERRIDES := \
@@ -58,8 +59,6 @@ PRODUCT_CHARACTERISTICS := tablet,sdcard
 # Sensors
 PRODUCT_COPY_FILES += \
     device/pandigital/s3c6410/prebuilt/akmd/akmd:system/bin/akmd
-PRODUCT_PACKAGES += \
-	    sensors.s3c6410 \
 
 #Wifi
 PRODUCT_COPY_FILES += \

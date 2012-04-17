@@ -15,12 +15,12 @@
  */
 
 #define LOG_TAG "AudioPolicyManager"
-#define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 #include <utils/Log.h>
 #include "AudioPolicyManager.h"
 #include <media/mediarecorder.h>
 
-namespace android {
+namespace android_audio_legacy {
 
 
 

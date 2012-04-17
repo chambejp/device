@@ -72,7 +72,7 @@ static int sensors__get_sensors_list(struct sensors_module_t* module,
         struct sensor_t const** list)
 {
 	/* terminander */
-	LOGE("trm, sensors__get_sensors_list");    
+//	LOGE("trm, sensors__get_sensors_list");    
     *list = sSensorList;
     return ARRAY_SIZE(sSensorList);
 }
@@ -104,6 +104,6 @@ static int open_sensors(const struct hw_module_t* module, const char* name,
         struct hw_device_t** device)
 {
 	/* terminander */
-	LOGE("trm, open_sensors");    
+//	LOGE("trm, open_sensors");    
 	return init_nusensors(module, device);
 }

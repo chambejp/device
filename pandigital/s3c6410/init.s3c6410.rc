@@ -9,7 +9,7 @@ loglevel 3
 
 # setup the global environment
     export PATH /sbin:/vendor/bin:/system/sbin:/system/bin:/system/xbin
-    export LD_LIBRARY_PATH /vendor/lib:/system/lib:/system/lib/egl
+    export LD_LIBRARY_PATH /vendor/lib:/system/lib
     export ANDROID_BOOTLOGO 1
     export ANDROID_ROOT /system
     export ANDROID_ASSETS /system/app
@@ -130,14 +130,15 @@ echo 1 > /sys/power/wake_lock
     mkdir /data/misc/keystore 0700 keystore keystore
     mkdir /data/misc/vpn 0770 system system
     mkdir /data/misc/vpn/profiles 0770 system system
-# Geng Jinfeng, wifi
-    mkdir /data/misc/dhcp 0777 system system
-    mkdir /data/misc/wifi 0777 system system
-    mkdir /data/misc/wifi/sockets 0777 system system
-    mkdir /data/system 0777 system system
-    mkdir /var 0777 system system
-    mkdir /var/local 0777 system system
-    
+
+
+#   Randomblame rewrite wifi
+
+    mkdir /data/misc/wifi 0770 wifi wifi
+    mkdir /data/misc/wifi/sockets 0770 wifi wifi
+    mkdir /data/misc/dhcp 0770 dhcp dhcp
+    chown dhcp dhcp /data/misc/dhcp
+   
 #--------------------------------------------------
     mkdir /data/local 0771 shell shell
     mkdir /data/local/tmp 0771 shell shell
@@ -404,7 +405,7 @@ service debuggerd /system/bin/debuggerd
     class main
 
 service ril-daemon /system/bin/rild
-    class late_start
+    class main
     socket rild stream 660 root radio
     socket rild-debug stream 660 radio system
     user root
@@ -496,25 +497,26 @@ service dumpstate /system/bin/dumpstate -s
 
 #Wifi additions
 
-
 service loadWiFi /system/bin/loadWiFi.sh
     class main
     oneshot
 
-
-service dhcpcd /system/bin/dhcpcd -B ra0
-class main
-disabled
-oneshot
-
-
 service wpa_supplicant /system/bin/wpa_supplicant \
--Dwext -ira0 -c/data/misc/wifi/wpa_supplicant.conf
+-Dawext -ira0 -c/data/misc/wifi/wpa_supplicant.conf
 class main
 socket wpa_ra0 dgram 660 wifi wifi
 disabled
-oneshot                                            
- 
+oneshot
+
+service dhcpcd_ra0 /system/bin/dhcpcd -ABKL
+	class main
+	disabled
+	oneshot
+
+service iprenew_ra0 /system/bin/dhcpcd -n
+    disabled
+    oneshot                                         
+
 #add for auto backlitht by zhenghui.li@archermind.com 20100511
 service  autobl   /system/bin/autobl
     class main

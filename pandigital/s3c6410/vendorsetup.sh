@@ -15,3 +15,4 @@
 #
 
 add_lunch_combo full_s3c6410-eng
+add_lunch_combo full_s3c6410-user

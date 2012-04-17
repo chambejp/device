@@ -388,3 +388,4 @@ void AkmSensor::processEvent(int code, int value)
             break;
     }
 }
+
