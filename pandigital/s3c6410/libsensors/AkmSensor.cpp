@@ -280,28 +280,28 @@ int AkmSensor::readEvents(sensors_event_t* data, int count)
              processEvent(EVENT_TYPE_ACCEL_Z, 5);
 switch (event->value) {
         case 2:  // /\  // 0 degrees Normal Orientation logo to the right Rotation 1
-		processEvent(EVENT_TYPE_ACCEL_X, 1);//734 
+		processEvent(EVENT_TYPE_ACCEL_X, 2);//734 
 		processEvent(EVENT_TYPE_ACCEL_Y, 1);
 	//	processEvent(EVENT_TYPE_ACCEL_Z, 2);		
 		//processEvent(EVENT_TYPE_ACCEL_STATUS, event->value);		
 		break;
 
-        case 3: // < 90 degrees logo up Rotation 2
-		processEvent(EVENT_TYPE_ACCEL_X, 2);
+        case 3: // < 90 degrees logo to right Rotation 2
+		processEvent(EVENT_TYPE_ACCEL_X, 3);
 		processEvent(EVENT_TYPE_ACCEL_Y, 1);//734	
 	//	processEvent(EVENT_TYPE_ACCEL_Z, );		
 		//processEvent(EVENT_TYPE_ACCEL_STATUS, 0);		
 		break;
 
         case 4: // \/ 180 degrees logo to bottom Rotation 3
-		processEvent(EVENT_TYPE_ACCEL_X, 3);//-639
+		processEvent(EVENT_TYPE_ACCEL_X, 4);//-639
 		processEvent(EVENT_TYPE_ACCEL_Y, 1);	
 	//	processEvent(EVENT_TYPE_ACCEL_Z, 2);	
 		//processEvent(EVENT_TYPE_ACCEL_STATUS, event->value);		
 		break;
 
-        case 5: // > 270 degrees logo to right (Current Locked Orientation) Rotation 4
-		processEvent(EVENT_TYPE_ACCEL_X, 4);
+        case 5: // > 270 degrees logo to right (Current Locked Orientation) Rotation 0
+		processEvent(EVENT_TYPE_ACCEL_X, 1);
 		processEvent(EVENT_TYPE_ACCEL_Y, 1);	//-639	
 	//	processEvent(EVENT_TYPE_ACCEL_Z, 2);
 		//processEvent(EVENT_TYPE_ACCEL_STATUS, event->value);		
