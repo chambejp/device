@@ -24,6 +24,7 @@
 #include <utils/String8.h>
 
 #include <stdio.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -40,8 +41,9 @@ extern "C" {
 #include "alsa_audio.h"
 }
 
-
 namespace android_audio_legacy {
+
+using namespace android;
 
 const uint32_t AudioHardware::inputSamplingRates[] = {
         8000, 11025, 16000, 22050, 44100
@@ -71,225 +73,113 @@ enum {
 #define TRACE_DRIVER_OUT
 #endif
 
-// ----------------------------------------------------------------------------
-
-const AudioHardware::AudioPinConfig AudioHardware::initialPinConfig[] = {
-    { "Line Output 1 Differential", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "Line Output 3 Differential", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "Line Input 1 Differential", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "Line Input 2 Differential", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "Line Input 3 Differential", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "Line Input 4 Differential", AudioHardware::TYPE_BOOL, NULL, 1 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig inputMicMainPinConfigs[] = {
-    { "Main Mic Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "RIN MUX", AudioHardware::TYPE_MUX, "RIN2", 0 },
-    { "LIN MUX", AudioHardware::TYPE_MUX, "LIN1", 0 },
-    { "Mic Amp Capture Volume", AudioHardware::TYPE_INT, NULL, 87 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig inputMicSubPinConfigs[] = {
-    { "Sub Mic Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "RIN MUX", AudioHardware::TYPE_MUX, "RIN2", 0 },
-    { "LIN MUX", AudioHardware::TYPE_MUX, "LIN1", 0 },
-    { "Mic Amp Capture Volume", AudioHardware::TYPE_INT, NULL, 60 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig inputHeadsetPinConfigs[] = {
-    { "Jack Mic Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "RIN MUX", AudioHardware::TYPE_MUX, "RIN2", 0 },
-    { "LIN MUX", AudioHardware::TYPE_MUX, "LIN3", 0 },
-    { "Mic Amp Capture Volume", AudioHardware::TYPE_INT, NULL, 60 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig inputPhonePinConfigs[] = {
-    { "Main Mic Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "GSM Receive Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "RIN MUX", AudioHardware::TYPE_MUX, "RIN4", 0 },
-    { "LIN MUX", AudioHardware::TYPE_MUX, "LIN1", 0 },
-    { "Mic Amp Capture Volume", AudioHardware::TYPE_INT, NULL, 87 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioRouteConfig inputRouteConfigs[] = {
-    { AudioHardware::INPUT_MIC_MAIN, inputMicMainPinConfigs },
-    { AudioHardware::INPUT_MIC_SUB, inputMicSubPinConfigs },
-    { AudioHardware::INPUT_HEADSET, inputHeadsetPinConfigs },
-    { AudioHardware::INPUT_PHONE, inputPhonePinConfigs },
-    AUDIO_ROUTE_CONFIG_TERMINATOR
-};
-
-static const AudioHardware::AudioPinConfig outputRcvPinConfigs[] = {
-    { "Line Output1 Playback Volume", AudioHardware::TYPE_INT, NULL, 84 },
-    { "LOUT1 Mixer DACL", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "ROUT1 Mixer DACR", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "Earpiece Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig outputSpkPinConfigs[] = {
-    { "MAX9877 Amp Speaker Playback Volume", AudioHardware::TYPE_INT, NULL, 95 },
-    { "Speaker Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "LOUT2 Mixer DACHL", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "ROUT2 Mixer DACHR", AudioHardware::TYPE_BOOL, NULL, 1 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig outputHpPinConfigs[] = {
-    { "MAX9877 Amp HP Playback Volume", AudioHardware::TYPE_INT, NULL, 100 },
-    { "Headphones Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "LOUT2 Mixer DACHL", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "ROUT2 Mixer DACHR", AudioHardware::TYPE_BOOL, NULL, 1 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig outputSpkHpPinConfigs[] = {
-    { "MAX9877 Amp Speaker Playback Volume", AudioHardware::TYPE_INT, NULL, 95 },
-    { "MAX9877 Amp HP Playback Volume", AudioHardware::TYPE_INT, NULL, 100 },
-    { "LOUT2 Mixer DACHL", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "ROUT2 Mixer DACHR", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "Speaker Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "Headphones Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioRouteConfig outputRouteConfigs[] = {
-    { AudioHardware::OUTPUT_RCV, outputRcvPinConfigs },
-    { AudioHardware::OUTPUT_SPK, outputSpkPinConfigs },
-    { AudioHardware::OUTPUT_HP, outputHpPinConfigs },
-    { AudioHardware::OUTPUT_SPK_HP, outputSpkHpPinConfigs },
-    AUDIO_ROUTE_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig voiceInMicMainPinConfigs[] = {
-    { "Main Mic Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "LOUT3 Mixer LINS1", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "ROUT3 Mixer RINS1", AudioHardware::TYPE_BOOL, NULL, 1 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig voiceInMicSubPinConfigs[] = {
-    { "Sub Mic Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "LOUT3 Mixer LINS2", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "ROUT3 Mixer RINS2", AudioHardware::TYPE_BOOL, NULL, 1 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig voiceInHeadsetPinConfigs[] = {
-    { "Jack Mic Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "LOUT3 Mixer LINS3", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "ROUT3 Mixer RINS3", AudioHardware::TYPE_BOOL, NULL, 1 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioRouteConfig voiceInRouteConfigs[] = {
-    { AudioHardware::VOICE_IN_MIC_MAIN, voiceInMicMainPinConfigs },
-    { AudioHardware::VOICE_IN_MIC_SUB, voiceInMicSubPinConfigs },
-    { AudioHardware::VOICE_IN_HEADSET, voiceInHeadsetPinConfigs },
-    AUDIO_ROUTE_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig voiceOutRcvPinConfigs[] = {
-    { "LOUT1 Mixer LINL4", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "ROUT1 Mixer RINR4", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "Earpiece Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig voiceOutSpkPinConfigs[] = {
-    { "LOUT2 Mixer LINH4", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "ROUT2 Mixer RINH4", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "Speaker Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioPinConfig voiceOutHpPinConfigs[] = {
-    { "LOUT2 Mixer LINH4", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "ROUT2 Mixer RINH4", AudioHardware::TYPE_BOOL, NULL, 1 },
-    { "Headphones Switch", AudioHardware::TYPE_BOOL, NULL, 1 },
-    AUDIO_PIN_CONFIG_TERMINATOR,
-};
-
-static const AudioHardware::AudioRouteConfig voiceOutRouteConfigs[] = {
-    { AudioHardware::VOICE_OUT_RCV, voiceOutRcvPinConfigs },
-    { AudioHardware::VOICE_OUT_SPK, voiceOutSpkPinConfigs },
-    { AudioHardware::VOICE_OUT_HP, voiceOutHpPinConfigs },
-    AUDIO_ROUTE_CONFIG_TERMINATOR,
-};
-
-const AudioHardware::AudioRouteConfig *AudioHardware::routeTables[] = {
-    inputRouteConfigs,
-    outputRouteConfigs,
-    voiceInRouteConfigs,
-    voiceOutRouteConfigs
-};
-
-void AudioHardware::setAudioRoute(enum RouteType type, uint32_t newRoute)
+static struct mixer_ctl *get_ctl(struct mixer *mixer, const char *name)
 {
-    const AudioRouteConfig *route;
-    const AudioPinConfig *pin;
-    struct mixer_ctl *ctl;
+    char *p;
+    unsigned idx = 0;
 
-    if (mRoute[type] == newRoute)
-        return;
+    if (isdigit(name[0]))
+        return mixer_get_nth_control(mixer, atoi(name) - 1);
 
-    for (route = routeTables[type]; route->route; ++route)
-        if (route->route == mRoute[type])
-            break;
-
-    if (route->route) {
-        /* Disable current route */
-        for (pin = route->config; pin->type; ++pin) {
-            if (pin->type != TYPE_BOOL)
-                continue;
-    
-            TRACE_DRIVER_IN(DRV_MIXER_GET)
-            ctl = mixer_get_control(mMixer, pin->ctl, 0);
-            TRACE_DRIVER_OUT
-            if (!ctl)
-                continue;
-    
-            TRACE_DRIVER_IN(DRV_MIXER_SEL)
-            mixer_ctl_set(ctl, !pin->intValue);
-            TRACE_DRIVER_OUT
-        }
+    p = strrchr(name, '#');
+    if (p) {
+        *p++ = 0;
+        idx = atoi(p);
     }
 
-    for (route = routeTables[type]; route->route; ++route)
-        if (route->route == newRoute)
-            break;
-
-    if (route->route) {
-        /* Configure new route */
-        for (pin = route->config; pin->type; ++pin) {
-            TRACE_DRIVER_IN(DRV_MIXER_GET)
-            ctl = mixer_get_control(mMixer, pin->ctl, 0);
-            TRACE_DRIVER_OUT
-            if (!ctl)
-                continue;
-
-            if (pin->type == TYPE_MUX) {
-                TRACE_DRIVER_IN(DRV_MIXER_SEL)
-                mixer_ctl_select(ctl, pin->strValue);
-                TRACE_DRIVER_OUT
-                continue;
-            }
-
-            TRACE_DRIVER_IN(DRV_MIXER_SEL)
-            mixer_ctl_set(ctl, pin->intValue);
-            TRACE_DRIVER_OUT
-        }
-    }
-
-    mRoute[type] = newRoute;
+    return mixer_get_control(mixer, name, idx);
 }
 
+static void setMixerCtl(const char *name, const char *value)
+{
+    struct mixer *mixer;
+    struct mixer_ctl *ctl;
+    int r;
+
+    mixer = mixer_open();
+    if (!mixer) {
+        LOGE("open_mixer failed: %s", strerror(errno));
+        return;
+    }
+
+    ctl = get_ctl(mixer, name);
+    if (!ctl) {
+        LOGE("can't find mixer ctl: %s", name);
+        return;
+    }
+
+    if (isdigit(*value))
+        r = mixer_ctl_set(ctl, atoi(value));
+    else
+        r = mixer_ctl_select(ctl, value);
+    if (r)
+        LOGE("setMixerCtl(%s, %s): %s\n", name, value, strerror(errno));
+
+    mixer_close(mixer);
+}
+
+static void setAudioRouting(int device)
+{
+    switch(device) {
+        case AudioSystem::DEVICE_OUT_WIRED_HEADSET:
+        case AudioSystem::DEVICE_OUT_WIRED_HEADPHONE:
+            LOGD("Routing: HEADSET");
+            setMixerCtl("PCM Playback Volume", "127");
+            setMixerCtl("Headphone Playback Volume", "127");
+            setMixerCtl("HP DAC Playback Volume", "0");
+            setMixerCtl("Line DAC Playback Volume", "127");
+            setMixerCtl("ADC HPF Cut-off", "Disabled");
+            setMixerCtl("Speaker Function", "Off");
+            setMixerCtl("Jack Function", "Headset");
+            setMixerCtl("Earphone Function", "Off");
+            break;
+
+        case AudioSystem::DEVICE_OUT_EARPIECE:
+            LOGD("Routing: EARPIECE");
+            setMixerCtl("Headphone Playback Volume", "0");
+            setMixerCtl("Line DAC Playback Volume", "0");
+            setMixerCtl("Mono DAC Playback Volume", "118");
+            setMixerCtl("HP DAC Playback Volume", "0");
+            setMixerCtl("HP Line2 Bypass Playback Volume", "0");
+            setMixerCtl("HPCOM PGA Bypass Playback Volume", "0");
+            setMixerCtl("HP DAC Playback Volume", "71");
+            setMixerCtl("HP DAC Output Volume", "");
+            setMixerCtl("Input Select", "Digital Mic");
+            setMixerCtl("Earphone Playback Volume", "118");
+            //setMixerCtl("ADC HPF Cut-off", "0.0045xFs");
+            setMixerCtl("Speaker Function", "Off");
+            setMixerCtl("Jack Function", "Off");
+            setMixerCtl("Earphone Function", "On");
+            break;
+        case AudioSystem::DEVICE_OUT_SPEAKER:
+            LOGD("Routing: SPEAKERS");
+            setMixerCtl("PCM Playback Volume", "118");
+            setMixerCtl("HP DAC Playback Volume", "118");
+            setMixerCtl("HP DAC Output Volume", "6");
+            setMixerCtl("Line DAC Playback Volume", "127");
+            setMixerCtl("Headphone Playback Volume", "0");
+            //setMixerCtl("ADC HPF Cut-off", "0.0045xFs");
+            setMixerCtl("Speaker Function", "On");
+            setMixerCtl("Jack Function", "Off");
+            setMixerCtl("Earphone Function", "Off");
+            break;
+        case AudioSystem::DEVICE_OUT_SPEAKER | AudioSystem::DEVICE_OUT_WIRED_HEADSET:
+
+
+        default:
+          LOGE("Don't know anything about routing #%d", device);
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+const char *AudioHardware::inputPathNameDefault = "Default";
+const char *AudioHardware::inputPathNameCamcorder = "Camcorder";
+const char *AudioHardware::inputPathNameVoiceRecognition = "Voice Recognition";
+const char *AudioHardware::inputPathNameVoiceCommunication = "Voice Communication";
+
 AudioHardware::AudioHardware() :
+//LOGE("mINIT is %d", mInit);
     mInit(false),
     mMicMute(false),
     mPcm(NULL),
@@ -300,39 +190,15 @@ AudioHardware::AudioHardware() :
     mVoiceVol(1.0f),
     mInputSource(AUDIO_SOURCE_DEFAULT),
     mBluetoothNrec(true),
+    mTTYMode(TTY_MODE_OFF),
+    mSecRilLibHandle(NULL),
+    mRilClient(0),
+    mActivatedCP(false),
     mDriverOp(DRV_NONE)
 {
-    struct mixer_ctl *ctl;
-    struct mixer *mixer;
-    const struct AudioPinConfig *pin;
-
-    mixer = openMixer_l();
-    if (mixer == NULL) {
-        LOGE("Failed to open mixer");
-        return;
-    }
-
-    for (pin = initialPinConfig; pin->type != TYPE_NONE; ++pin) {
-        TRACE_DRIVER_IN(DRV_MIXER_GET)
-        ctl = mixer_get_control(mixer, pin->ctl, 0);
-        TRACE_DRIVER_OUT
-        if (!ctl)
-            continue;
-
-        if (pin->type == TYPE_MUX) {
-            TRACE_DRIVER_IN(DRV_MIXER_SEL)
-            mixer_ctl_select(ctl, pin->strValue);
-            TRACE_DRIVER_OUT
-            continue;
-        }
-        TRACE_DRIVER_IN(DRV_MIXER_SEL)
-        mixer_ctl_set(ctl, pin->intValue);
-        TRACE_DRIVER_OUT
-    }
-
-    closeMixer_l();
-
+    loadRILD();
     mInit = true;
+    setAudioRouting(AudioSystem::DEVICE_OUT_SPEAKER);
 }
 
 AudioHardware::~AudioHardware()
@@ -354,12 +220,93 @@ AudioHardware::~AudioHardware()
         TRACE_DRIVER_OUT
     }
 
+#if 0
+    if (mSecRilLibHandle) {
+        if (disconnectRILD(mRilClient) != RIL_CLIENT_ERR_SUCCESS)
+            LOGE("Disconnect_RILD() error");
+
+        if (closeClientRILD(mRilClient) != RIL_CLIENT_ERR_SUCCESS)
+            LOGE("CloseClient_RILD() error");
+
+        mRilClient = 0;
+
+        dlclose(mSecRilLibHandle);
+        mSecRilLibHandle = NULL;
+    }
+#endif
+
     mInit = false;
 }
 
 status_t AudioHardware::initCheck()
 {
     return mInit ? NO_ERROR : NO_INIT;
+}
+
+void AudioHardware::loadRILD(void)
+{
+#if 0
+    mSecRilLibHandle = dlopen("libsecril-client.so", RTLD_NOW);
+
+    if (mSecRilLibHandle) {
+        LOGV("libsecril-client.so is loaded");
+
+        openClientRILD   = (HRilClient (*)(void))
+                              dlsym(mSecRilLibHandle, "OpenClient_RILD");
+        disconnectRILD   = (int (*)(HRilClient))
+                              dlsym(mSecRilLibHandle, "Disconnect_RILD");
+        closeClientRILD  = (int (*)(HRilClient))
+                              dlsym(mSecRilLibHandle, "CloseClient_RILD");
+        isConnectedRILD  = (int (*)(HRilClient))
+                              dlsym(mSecRilLibHandle, "isConnected_RILD");
+        connectRILD      = (int (*)(HRilClient))
+                              dlsym(mSecRilLibHandle, "Connect_RILD");
+        setCallVolume    = (int (*)(HRilClient, SoundType, int))
+                              dlsym(mSecRilLibHandle, "SetCallVolume");
+        setCallAudioPath = (int (*)(HRilClient, AudioPath))
+                              dlsym(mSecRilLibHandle, "SetCallAudioPath");
+        setCallClockSync = (int (*)(HRilClient, SoundClockCondition))
+                              dlsym(mSecRilLibHandle, "SetCallClockSync");
+
+        if (!openClientRILD  || !disconnectRILD   || !closeClientRILD ||
+            !isConnectedRILD || !connectRILD      ||
+            !setCallVolume   || !setCallAudioPath || !setCallClockSync) {
+            LOGE("Can't load all functions from libsecril-client.so");
+
+            dlclose(mSecRilLibHandle);
+            mSecRilLibHandle = NULL;
+        } else {
+            mRilClient = openClientRILD();
+            if (!mRilClient) {
+                LOGE("OpenClient_RILD() error");
+
+                dlclose(mSecRilLibHandle);
+                mSecRilLibHandle = NULL;
+            }
+        }
+    } else {
+        LOGE("Can't load libsecril-client.so");
+    }
+#endif
+}
+
+status_t AudioHardware::connectRILDIfRequired(void)
+{
+    if (!mSecRilLibHandle) {
+        LOGE("connectIfRequired() lib is not loaded");
+        return INVALID_OPERATION;
+    }
+
+    if (isConnectedRILD(mRilClient)) {
+        return OK;
+    }
+
+    if (connectRILD(mRilClient) != RIL_CLIENT_ERR_SUCCESS) {
+        LOGE("Connect_RILD() error");
+        return INVALID_OPERATION;
+    }
+
+    return OK;
 }
 
 AudioStreamOut* AudioHardware::openOutputStream(
@@ -370,16 +317,17 @@ AudioStreamOut* AudioHardware::openOutputStream(
     status_t rc;
 
     { // scope for the lock
-        android::Mutex::Autolock lock(mLock);
+        Mutex::Autolock lock(mLock);
 
         // only one output stream allowed
-	AudioStreamOutALSA* out;
-        if (mOutput) {
-            out = mOutput;
-            } else {
-		// create new output stream
-       		out = new AudioStreamOutALSA();
+        if (mOutput != 0) {
+            if (status) {
+                *status = INVALID_OPERATION;
+            }
+            return NULL;
         }
+
+        out = new AudioStreamOutALSA();
 
         rc = out->set(this, devices, format, channels, sampleRate);
         if (rc == NO_ERROR) {
@@ -402,7 +350,7 @@ AudioStreamOut* AudioHardware::openOutputStream(
 void AudioHardware::closeOutputStream(AudioStreamOut* out) {
     sp <AudioStreamOutALSA> spOut;
     {
-        android::Mutex::Autolock lock(mLock);
+        Mutex::Autolock lock(mLock);
         if (mOutput == 0 || mOutput.get() != out) {
             LOGW("Attempt to close invalid output stream");
             return;
@@ -430,7 +378,7 @@ AudioStreamIn* AudioHardware::openInputStream(
     sp <AudioStreamInALSA> in;
 
     { // scope for the lock
-        android::Mutex::Autolock lock(mLock);
+        Mutex::Autolock lock(mLock);
 
         in = new AudioStreamInALSA();
         rc = in->set(this, devices, format, channels, sampleRate, acoustic_flags);
@@ -456,7 +404,7 @@ void AudioHardware::closeInputStream(AudioStreamIn* in) {
 
     sp<AudioStreamInALSA> spIn;
     {
-        android::Mutex::Autolock lock(mLock);
+        Mutex::Autolock lock(mLock);
 
         ssize_t index = mInputs.indexOf((AudioStreamInALSA *)in);
         if (index < 0) {
@@ -476,10 +424,6 @@ status_t AudioHardware::setMode(int mode)
     sp<AudioStreamOutALSA> spOut;
     sp<AudioStreamInALSA> spIn;
     status_t status;
-
-    // bump thread priority to speed up mutex acquisition
-    int  priority = getpriority(PRIO_PROCESS, 0);
-    setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_URGENT_AUDIO);
 
     // Mutex acquisition order is always out -> in -> hw
     AutoMutex lock(mLock);
@@ -504,8 +448,6 @@ status_t AudioHardware::setMode(int mode)
     }
     // spOut is not 0 here only if the output is active
 
-    setpriority(PRIO_PROCESS, 0, priority);
-
     spIn = getActiveInput_l();
     while (spIn != 0) {
         int cnt = spIn->prepareLock();
@@ -526,8 +468,16 @@ status_t AudioHardware::setMode(int mode)
     status = AudioHardwareBase::setMode(mode);
     LOGV("setMode() : new %d, old %d", mMode, prevMode);
     if (status == NO_ERROR) {
+        // activate call clock in radio when entering in call or ringtone mode
+        if (prevMode == AudioSystem::MODE_NORMAL)
+        {
+            if ((!mActivatedCP) && (mSecRilLibHandle) && (connectRILDIfRequired() == OK)) {
+                setCallClockSync(mRilClient, SOUND_CLOCK_START);
+                mActivatedCP = true;
+            }
+        }
+
         if (mMode == AudioSystem::MODE_IN_CALL && !mInCallAudioMode) {
-            struct mixer_ctl *ctl;
             if (spOut != 0) {
                 LOGV("setMode() in call force output standby");
                 spOut->doStandby_l();
@@ -540,35 +490,23 @@ status_t AudioHardware::setMode(int mode)
             LOGV("setMode() openPcmOut_l()");
             openPcmOut_l();
             openMixer_l();
-            if (mMixer != NULL) {
-                setAudioRoute(ROUTE_OUTPUT, OUTPUT_RCV);
-                setAudioRoute(ROUTE_VOICE_IN, VOICE_IN_MIC_MAIN);
-                setAudioRoute(ROUTE_VOICE_OUT, VOICE_OUT_RCV);
-                setVoiceVolume_l(mVoiceVol);
-                ctl = mixer_get_control(mMixer, "GSM Send Switch", 0);
-                if (ctl)
-                    mixer_ctl_set(ctl, 1);
-                ctl = mixer_get_control(mMixer, "GSM Receive Switch", 0);
-                if (ctl)
-                    mixer_ctl_set(ctl, 1);
-            }
+            setInputSource_l(AUDIO_SOURCE_DEFAULT);
+            setVoiceVolume_l(mVoiceVol);
             mInCallAudioMode = true;
         }
-        if (mMode != AudioSystem::MODE_IN_CALL && mInCallAudioMode) {
-            struct mixer_ctl *ctl;
+        if (mMode == AudioSystem::MODE_NORMAL && mInCallAudioMode) {
+            setInputSource_l(mInputSource);
             if (mMixer != NULL) {
-                setAudioRoute(ROUTE_VOICE_OUT, 0);
-                setAudioRoute(ROUTE_VOICE_IN, 0);
-                setAudioRoute(ROUTE_OUTPUT, OUTPUT_RCV);
-                setMasterVolume_l(mMasterVol);
-                ctl = mixer_get_control(mMixer, "GSM Send Switch", 0);
-                if (ctl)
-                    mixer_ctl_set(ctl, 0);
-                ctl = mixer_get_control(mMixer, "GSM Receive Switch", 0);
-                if (ctl)
-                    mixer_ctl_set(ctl, 0);
+                TRACE_DRIVER_IN(DRV_MIXER_GET)
+                struct mixer_ctl *ctl= mixer_get_control(mMixer, "Playback Path", 0);
+                TRACE_DRIVER_OUT
+                if (ctl != NULL) {
+                    LOGV("setMode() reset Playback Path to RCV");
+                    TRACE_DRIVER_IN(DRV_MIXER_SEL)
+                    mixer_ctl_select(ctl, "RCV");
+                    TRACE_DRIVER_OUT
+                }
             }
-
             LOGV("setMode() closePcmOut_l()");
             closeMixer_l();
             closePcmOut_l();
@@ -583,6 +521,11 @@ status_t AudioHardware::setMode(int mode)
             }
 
             mInCallAudioMode = false;
+        }
+
+        if (mMode == AudioSystem::MODE_NORMAL) {
+            if(mActivatedCP)
+                mActivatedCP = false;
         }
     }
 
@@ -603,14 +546,11 @@ status_t AudioHardware::setMicMute(bool state)
     {
         AutoMutex lock(mLock);
         if (mMicMute != state) {
-            if (mMode == AudioSystem::MODE_IN_CALL) {
-                mVoiceInRoute = mRoute[ROUTE_VOICE_IN];
-                setAudioRoute(ROUTE_VOICE_IN, (state) ? 0 : mVoiceInRoute);
-            } else {
-                mInputRoute = mRoute[ROUTE_INPUT];
-                setAudioRoute(ROUTE_INPUT, (state) ? 0 : mInputRoute);
-            }
             mMicMute = state;
+            // in call mute is handled by RIL
+            if (mMode != AudioSystem::MODE_IN_CALL) {
+                spIn = getActiveInput_l();
+            }
         }
     }
 
@@ -634,6 +574,11 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
     String8 key;
     const char BT_NREC_KEY[] = "bt_headset_nrec";
     const char BT_NREC_VALUE_ON[] = "on";
+    const char TTY_MODE_KEY[] = "tty_mode";
+    const char TTY_MODE_VALUE_OFF[] = "tty_off";
+    const char TTY_MODE_VALUE_VCO[] = "tty_vco";
+    const char TTY_MODE_VALUE_HCO[] = "tty_hco";
+    const char TTY_MODE_VALUE_FULL[] = "tty_full";
 
     key = String8(BT_NREC_KEY);
     if (param.get(key, value) == NO_ERROR) {
@@ -646,6 +591,31 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
         }
         param.remove(String8(BT_NREC_KEY));
     }
+
+    key = String8(TTY_MODE_KEY);
+    if (param.get(key, value) == NO_ERROR) {
+        int ttyMode;
+        if (value == TTY_MODE_VALUE_OFF) {
+            ttyMode = TTY_MODE_OFF;
+        } else if (value == TTY_MODE_VALUE_VCO) {
+            ttyMode = TTY_MODE_VCO;
+        } else if (value == TTY_MODE_VALUE_HCO) {
+            ttyMode = TTY_MODE_HCO;
+        } else if (value == TTY_MODE_VALUE_FULL) {
+            ttyMode = TTY_MODE_FULL;
+        } else {
+            return BAD_VALUE;
+        }
+
+        if (ttyMode != mTTYMode) {
+            LOGV("new tty mode %d", ttyMode);
+            mTTYMode = ttyMode;
+            if (mOutput != 0 && mMode == AudioSystem::MODE_IN_CALL) {
+                setIncallPath_l(mOutput->device());
+            }
+        }
+        param.remove(String8(TTY_MODE_KEY));
+     }
 
     return NO_ERROR;
 }
@@ -679,45 +649,6 @@ size_t AudioHardware::getInputBufferSize(uint32_t sampleRate, int format, int ch
     return AudioStreamInALSA::getBufferSize(sampleRate, channelCount);
 }
 
-void AudioHardware::setOutputVolume(uint32_t device, uint32_t volume)
-{
-    const char *name, *name2 = 0;
-    struct mixer_ctl *ctl;
-
-    switch (device) {
-    case AudioSystem::DEVICE_OUT_EARPIECE:
-        name = "Line Output1 Playback Volume";
-        break;
-    case (AudioSystem::DEVICE_OUT_SPEAKER|AudioSystem::DEVICE_OUT_WIRED_HEADPHONE):
-    case (AudioSystem::DEVICE_OUT_SPEAKER|AudioSystem::DEVICE_OUT_WIRED_HEADSET):
-        name2 = "MAX9877 Amp HP Playback Volume";
-        /* Intended fall through */
-    case AudioSystem::DEVICE_OUT_SPEAKER:
-        name = "MAX9877 Amp Speaker Playback Volume";
-        break;
-    case AudioSystem::DEVICE_OUT_WIRED_HEADPHONE:
-    case AudioSystem::DEVICE_OUT_WIRED_HEADSET:
-        name = "MAX9877 Amp HP Playback Volume";
-        break;
-    case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO:
-    case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
-    case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_CARKIT:
-    default:
-        return;
-    }
-
-    if (mMixer) {
-        ctl = mixer_get_control(mMixer, name, 0);
-        if (ctl)
-            mixer_ctl_set(ctl, volume);
-        if (name2) {
-            ctl = mixer_get_control(mMixer, name2, 0);
-            if (ctl)
-                mixer_ctl_set(ctl, volume);
-        }
-    }
-}
-
 status_t AudioHardware::setVoiceVolume(float volume)
 {
     AutoMutex lock(mLock);
@@ -733,38 +664,58 @@ void AudioHardware::setVoiceVolume_l(float volume)
 
     mVoiceVol = volume;
 
-    if (AudioSystem::MODE_IN_CALL == mMode) {
+    if ( (AudioSystem::MODE_IN_CALL == mMode) && (mSecRilLibHandle) &&
+         (connectRILDIfRequired() == OK) ) {
+
         uint32_t device = AudioSystem::DEVICE_OUT_EARPIECE;
         if (mOutput != 0) {
             device = mOutput->device();
         }
-        setOutputVolume(device, 100*volume);
+        int int_volume = (int)(volume * 5);
+        SoundType type;
+
+        LOGD("### route(%d) call volume(%f)", device, volume);
+        switch (device) {
+            case AudioSystem::DEVICE_OUT_EARPIECE:
+                LOGD("### earpiece call volume");
+                type = SOUND_TYPE_VOICE;
+                break;
+
+            case AudioSystem::DEVICE_OUT_SPEAKER:
+                LOGD("### speaker call volume");
+                type = SOUND_TYPE_SPEAKER;
+                break;
+
+            case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO:
+            case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
+            case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_CARKIT:
+                LOGD("### bluetooth call volume");
+                type = SOUND_TYPE_BTVOICE;
+                break;
+
+            case AudioSystem::DEVICE_OUT_WIRED_HEADSET:
+            case AudioSystem::DEVICE_OUT_WIRED_HEADPHONE: // Use receive path with 3 pole headset.
+                LOGD("### headset call volume");
+                type = SOUND_TYPE_HEADSET;
+                break;
+
+            default:
+                LOGW("### Call volume setting error!!!0x%08x \n", device);
+                type = SOUND_TYPE_VOICE;
+                break;
+        }
+        setCallVolume(mRilClient, type, int_volume);
     }
+
 }
 
 status_t AudioHardware::setMasterVolume(float volume)
 {
-    AutoMutex lock(mLock);
-
-    setMasterVolume_l(volume);
-
-    return NO_ERROR;
-}
-
-void AudioHardware::setMasterVolume_l(float volume)
-{
-    LOGD("### setMasterVolume_l");
-
-    mMasterVol = volume;
-
-    if (mMixer) {
-	struct mixer_ctl *ctl;
-        ctl = mixer_get_control(mMixer, "Master Playback Volume", 0);
-        if (ctl) {
-	    unsigned val = volume * 231;
-            mixer_ctl_set(ctl, CTL_VALUE_RAW | val);
-	}
-    }
+    LOGV("Set master volume to %f.\n", volume);
+    // We return an error code here to let the audioflinger do in-software
+    // volume on top of the maximum volume that we set through the SND API.
+    // return error - software mixer will handle it
+    return -1;
 }
 
 static const int kDumpLockRetries = 50;
@@ -813,6 +764,13 @@ status_t AudioHardware::dump(int fd, const Vector<String16>& args)
     result.append(buffer);
     snprintf(buffer, SIZE, "\tInput source %d\n", mInputSource);
     result.append(buffer);
+    snprintf(buffer, SIZE, "\tmSecRilLibHandle: %p\n", mSecRilLibHandle);
+    result.append(buffer);
+    snprintf(buffer, SIZE, "\tmRilClient: %p\n", mRilClient);
+    result.append(buffer);
+    snprintf(buffer, SIZE, "\tCP %s\n",
+             (mActivatedCP) ? "Activated" : "Deactivated");
+    result.append(buffer);
     snprintf(buffer, SIZE, "\tmDriverOp: %d\n", mDriverOp);
     result.append(buffer);
 
@@ -838,17 +796,67 @@ status_t AudioHardware::setIncallPath_l(uint32_t device)
 {
     LOGV("setIncallPath_l: device %x", device);
 
-    if (mMode == AudioSystem::MODE_IN_CALL) {
-        LOGD("### incall mode route (%d)", device);
-        if (mMixer != NULL) {
-            uint32_t outRoute = getVoiceOutRouteFromDevice(device);
-            uint32_t inRoute = getVoiceInRouteFromDevice(device);
-            LOGV("setIncallPath_l() Voice Call Path, (%x)", device);
-            setAudioRoute(ROUTE_VOICE_OUT, outRoute);
-            setAudioRoute(ROUTE_VOICE_IN, inRoute);
+#if 0
+    // Setup sound path for CP clocking
+    if ((mSecRilLibHandle) &&
+        (connectRILDIfRequired() == OK)) {
+
+        if (mMode == AudioSystem::MODE_IN_CALL) {
+            LOGD("### incall mode route (%d)", device);
+            AudioPath path;
+            switch(device){
+                case AudioSystem::DEVICE_OUT_EARPIECE:
+                    LOGD("### incall mode earpiece route");
+                    path = SOUND_AUDIO_PATH_HANDSET;
+                    break;
+
+                case AudioSystem::DEVICE_OUT_SPEAKER:
+                    LOGD("### incall mode speaker route");
+                    path = SOUND_AUDIO_PATH_SPEAKER;
+                    break;
+
+                case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO:
+                case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
+                case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_CARKIT:
+                    LOGD("### incall mode bluetooth route %s NR", mBluetoothNrec ? "" : "NO");
+                    if (mBluetoothNrec) {
+                        path = SOUND_AUDIO_PATH_BLUETOOTH;
+                    } else {
+                        path = SOUND_AUDIO_PATH_BLUETOOTH_NO_NR;
+                    }
+                    break;
+
+                case AudioSystem::DEVICE_OUT_WIRED_HEADPHONE :
+                    LOGD("### incall mode headphone route");
+                    path = SOUND_AUDIO_PATH_HEADPHONE;
+                    break;
+                case AudioSystem::DEVICE_OUT_WIRED_HEADSET :
+                    LOGD("### incall mode headset route");
+                    path = SOUND_AUDIO_PATH_HEADSET;
+                    break;
+                default:
+                    LOGW("### incall mode Error!! route = [%d]", device);
+                    path = SOUND_AUDIO_PATH_HANDSET;
+                    break;
+            }
+
+            setCallAudioPath(mRilClient, path);
+
+            if (mMixer != NULL) {
+                TRACE_DRIVER_IN(DRV_MIXER_GET)
+                struct mixer_ctl *ctl= mixer_get_control(mMixer, "Voice Call Path", 0);
+                TRACE_DRIVER_OUT
+                LOGE_IF(ctl == NULL, "setIncallPath_l() could not get mixer ctl");
+                if (ctl != NULL) {
+                    LOGV("setIncallPath_l() Voice Call Path, (%x)", device);
+                    TRACE_DRIVER_IN(DRV_MIXER_SEL)
+                    mixer_ctl_select(ctl, getVoiceRouteFromDevice(device));
+                    TRACE_DRIVER_OUT
+                }
+            }
         }
     }
-
+#endif
     return NO_ERROR;
 }
 
@@ -934,85 +942,81 @@ void AudioHardware::closeMixer_l()
     }
 }
 
-uint32_t AudioHardware::getOutputRouteFromDevice(uint32_t device)
+const char *AudioHardware::getOutputRouteFromDevice(uint32_t device)
 {
     switch (device) {
     case AudioSystem::DEVICE_OUT_EARPIECE:
-        return OUTPUT_RCV;
+        return "RCV";
     case AudioSystem::DEVICE_OUT_SPEAKER:
-        return OUTPUT_SPK;
+        if (mMode == AudioSystem::MODE_RINGTONE) return "RING_SPK";
+        else return "SPK";
     case AudioSystem::DEVICE_OUT_WIRED_HEADPHONE:
+        if (mMode == AudioSystem::MODE_RINGTONE) return "RING_NO_MIC";
+        else return "HP_NO_MIC";
     case AudioSystem::DEVICE_OUT_WIRED_HEADSET:
-        return OUTPUT_HP;
+        if (mMode == AudioSystem::MODE_RINGTONE) return "RING_HP";
+        else return "HP";
     case (AudioSystem::DEVICE_OUT_SPEAKER|AudioSystem::DEVICE_OUT_WIRED_HEADPHONE):
     case (AudioSystem::DEVICE_OUT_SPEAKER|AudioSystem::DEVICE_OUT_WIRED_HEADSET):
-        return OUTPUT_SPK_HP;
+        if (mMode == AudioSystem::MODE_RINGTONE) return "RING_SPK_HP";
+        else return "SPK_HP";
     case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO:
     case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
     case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_CARKIT:
-        return OUTPUT_BT;
+        return "BT";
     default:
-        return 0;
+        return "OFF";
     }
 }
 
-uint32_t AudioHardware::getVoiceOutRouteFromDevice(uint32_t device)
+const char *AudioHardware::getVoiceRouteFromDevice(uint32_t device)
 {
     switch (device) {
     case AudioSystem::DEVICE_OUT_EARPIECE:
-        return VOICE_OUT_RCV;
+        return "RCV";
     case AudioSystem::DEVICE_OUT_SPEAKER:
-        return VOICE_OUT_SPK;
+        return "SPK";
     case AudioSystem::DEVICE_OUT_WIRED_HEADPHONE:
     case AudioSystem::DEVICE_OUT_WIRED_HEADSET:
-        return VOICE_OUT_HP;
+        switch (mTTYMode) {
+        case TTY_MODE_VCO:
+            return "TTY_VCO";
+        case TTY_MODE_HCO:
+            return "TTY_HCO";
+        case TTY_MODE_FULL:
+            return "TTY_FULL";
+        case TTY_MODE_OFF:
+        default:
+            if (device == AudioSystem::DEVICE_OUT_WIRED_HEADPHONE) {
+                return "HP_NO_MIC";
+            } else {
+                return "HP";
+            }
+        }
     case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO:
     case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
     case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_CARKIT:
-        return VOICE_OUT_BT;
+        return "BT";
     default:
-        return 0;
+        return "OFF";
     }
 }
 
-uint32_t AudioHardware::getVoiceInRouteFromDevice(uint32_t device)
-{
-    switch (device) {
-    case AudioSystem::DEVICE_OUT_EARPIECE:
-        return VOICE_IN_MIC_MAIN;
-    case AudioSystem::DEVICE_OUT_SPEAKER:
-        return VOICE_IN_MIC_SUB;
-    case AudioSystem::DEVICE_OUT_WIRED_HEADPHONE:
-    case AudioSystem::DEVICE_OUT_WIRED_HEADSET:
-        return VOICE_IN_HEADSET;
-    case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO:
-    case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
-    case AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_CARKIT:
-        return VOICE_IN_BT;
-    default:
-        return 0;
-    }
-}
-
-uint32_t AudioHardware::getInputRouteFromDevice(uint32_t device)
+const char *AudioHardware::getInputRouteFromDevice(uint32_t device)
 {
     if (mMicMute) {
-        return 0;
+        return "MIC OFF";
     }
 
     switch (device) {
     case AudioSystem::DEVICE_IN_BUILTIN_MIC:
-        return INPUT_MIC_MAIN;
-    case AudioSystem::DEVICE_IN_BACK_MIC:
-        return INPUT_MIC_SUB;
+        return "Main Mic";
     case AudioSystem::DEVICE_IN_WIRED_HEADSET:
-        return INPUT_HEADSET;
+        return "Hands Free Mic";
     case AudioSystem::DEVICE_IN_BLUETOOTH_SCO_HEADSET:
-        return INPUT_BT;
-    case AudioSystem::DEVICE_IN_VOICE_CALL:
-        return INPUT_PHONE;
+        return "BT Sco Mic";
     default:
-        return 0;
+        return "MIC OFF";
     }
 }
 
@@ -1047,12 +1051,58 @@ sp <AudioHardware::AudioStreamInALSA> AudioHardware::getActiveInput_l()
     return spIn;
 }
 
+status_t AudioHardware::setInputSource_l(audio_source source)
+{
+     LOGV("setInputSource_l(%d)", source);
+     if (source != mInputSource) {
+         if ((source == AUDIO_SOURCE_DEFAULT) || (mMode != AudioSystem::MODE_IN_CALL)) {
+             if (mMixer) {
+                 TRACE_DRIVER_IN(DRV_MIXER_GET)
+                 struct mixer_ctl *ctl= mixer_get_control(mMixer, "Input Source", 0);
+                 TRACE_DRIVER_OUT
+                 if (ctl == NULL) {
+                     return NO_INIT;
+                 }
+                 const char* sourceName;
+                 switch (source) {
+                     case AUDIO_SOURCE_DEFAULT: // intended fall-through
+                     case AUDIO_SOURCE_MIC:
+                         sourceName = inputPathNameDefault;
+                         break;
+                     case AUDIO_SOURCE_VOICE_COMMUNICATION:
+                         sourceName = inputPathNameVoiceCommunication;
+                         break;
+                     case AUDIO_SOURCE_CAMCORDER:
+                         sourceName = inputPathNameCamcorder;
+                         break;
+                     case AUDIO_SOURCE_VOICE_RECOGNITION:
+                         sourceName = inputPathNameVoiceRecognition;
+                         break;
+                     case AUDIO_SOURCE_VOICE_UPLINK:   // intended fall-through
+                     case AUDIO_SOURCE_VOICE_DOWNLINK: // intended fall-through
+                     case AUDIO_SOURCE_VOICE_CALL:     // intended fall-through
+                     default:
+                         return NO_INIT;
+                 }
+                 LOGV("mixer_ctl_select, Input Source, (%s)", sourceName);
+                 TRACE_DRIVER_IN(DRV_MIXER_SEL)
+                 mixer_ctl_select(ctl, sourceName);
+                 TRACE_DRIVER_OUT
+             }
+         }
+         mInputSource = source;
+     }
+
+     return NO_ERROR;
+}
+
+
 //------------------------------------------------------------------------------
 //  AudioStreamOutALSA
 //------------------------------------------------------------------------------
 
 AudioHardware::AudioStreamOutALSA::AudioStreamOutALSA() :
-    mHardware(0), mPcm(0), mMixer(0),
+    mHardware(0), mPcm(0), mMixer(0), mRouteCtl(0),
     mStandby(true), mDevices(0), mChannels(AUDIO_HW_OUT_CHANNELS),
     mSampleRate(AUDIO_HW_OUT_SAMPLERATE), mBufferSize(AUDIO_HW_OUT_PERIOD_BYTES),
     mDriverOp(DRV_NONE), mStandbyCnt(0), mSleepReq(false)
@@ -1116,10 +1166,6 @@ ssize_t AudioHardware::AudioStreamOutALSA::write(const void* buffer, size_t byte
         usleep(10000);
     }
 
-    // bump thread priority to speed up mutex acquisition
-    int  priority = getpriority(PRIO_PROCESS, 0);
-    setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_URGENT_AUDIO);
-
     { // scope for the lock
 
         AutoMutex lock(mLock);
@@ -1172,16 +1218,13 @@ ssize_t AudioHardware::AudioStreamOutALSA::write(const void* buffer, size_t byte
         TRACE_DRIVER_OUT
 
         if (ret == 0) {
-            setpriority(PRIO_PROCESS, 0, priority);
             return bytes;
         }
         LOGW("write error: %d", errno);
         status = -errno;
     }
-
-    setpriority(PRIO_PROCESS, 0, priority);
-
 Error:
+
     standby();
 
     // Simulate audio output timing in case of error
@@ -1227,6 +1270,7 @@ void AudioHardware::AudioStreamOutALSA::close_l()
     if (mMixer) {
         mHardware->closeMixer_l();
         mMixer = NULL;
+        mRouteCtl = NULL;
     }
     if (mPcm) {
         mHardware->closePcmOut_l();
@@ -1245,11 +1289,18 @@ status_t AudioHardware::AudioStreamOutALSA::open_l()
     mMixer = mHardware->openMixer_l();
     if (mMixer) {
         LOGV("open playback normal");
+        TRACE_DRIVER_IN(DRV_MIXER_GET)
+        mRouteCtl = mixer_get_control(mMixer, "Playback Path", 0);
+        TRACE_DRIVER_OUT
     }
     if (mHardware->mode() != AudioSystem::MODE_IN_CALL) {
-        uint32_t route = mHardware->getOutputRouteFromDevice(mDevices);
-        LOGV("write() wakeup setting route %d", route);
-        mHardware->setAudioRoute(ROUTE_OUTPUT, route);
+        const char *route = mHardware->getOutputRouteFromDevice(mDevices);
+        LOGV("write() wakeup setting route %s", route);
+        if (mRouteCtl) {
+            TRACE_DRIVER_IN(DRV_MIXER_SEL)
+            mixer_ctl_select(mRouteCtl, route);
+            TRACE_DRIVER_OUT
+        }
     }
     return NO_ERROR;
 }
@@ -1272,6 +1323,8 @@ status_t AudioHardware::AudioStreamOutALSA::dump(int fd, const Vector<String16>&
     snprintf(buffer, SIZE, "\t\tmPcm: %p\n", mPcm);
     result.append(buffer);
     snprintf(buffer, SIZE, "\t\tmMixer: %p\n", mMixer);
+    result.append(buffer);
+    snprintf(buffer, SIZE, "\t\tmRouteCtl: %p\n", mRouteCtl);
     result.append(buffer);
     snprintf(buffer, SIZE, "\t\tStandby %s\n", (mStandby) ? "ON" : "OFF");
     result.append(buffer);
@@ -1314,10 +1367,13 @@ status_t AudioHardware::AudioStreamOutALSA::setParameters(const String8& keyValu
             if (device != 0) {
                 AutoMutex hwLock(mHardware->lock());
 
+                LOGD("mDevices=%d, device=%d", mDevices, device);
                 if (mDevices != (uint32_t)device) {
                     mDevices = (uint32_t)device;
-                    if (mHardware->mode() != AudioSystem::MODE_IN_CALL) {
+                    //if (mHardware->mode() != AudioSystem::MODE_IN_CALL)
+                    {
                         doStandby_l();
+                        setAudioRouting(device);
                     }
                 }
                 if (mHardware->mode() == AudioSystem::MODE_IN_CALL) {
@@ -1380,11 +1436,10 @@ void AudioHardware::AudioStreamOutALSA::unlock() {
 //------------------------------------------------------------------------------
 
 AudioHardware::AudioStreamInALSA::AudioStreamInALSA() :
-    mHardware(0), mPcm(0), mMixer(0),
-    mStandby(true), mDevices(0), mChannels(AUDIO_HW_IN_CHANNELS), mChannelCount(2),
+    mHardware(0), mPcm(0), mMixer(0), mRouteCtl(0),
+    mStandby(true), mDevices(0), mChannels(AUDIO_HW_IN_CHANNELS), mChannelCount(1),
     mSampleRate(AUDIO_HW_IN_SAMPLERATE), mBufferSize(AUDIO_HW_IN_PERIOD_BYTES),
-    mDownSampler(NULL), mChannelMixer(NULL), mReadStatus(NO_ERROR),
-    mInPcmInBuf(0), mPcmIn(NULL), mDriverOp(DRV_NONE),
+    mDownSampler(NULL), mReadStatus(NO_ERROR), mDriverOp(DRV_NONE),
     mStandbyCnt(0), mSleepReq(false)
 {
 }
@@ -1393,66 +1448,39 @@ status_t AudioHardware::AudioStreamInALSA::set(
     AudioHardware* hw, uint32_t devices, int *pFormat,
     uint32_t *pChannels, uint32_t *pRate, AudioSystem::audio_in_acoustics acoustics)
 {
-    if (!pFormat || !pChannels || !pRate)
-        return BAD_VALUE;
-
-    if (*pFormat != AUDIO_HW_IN_FORMAT) {
-        LOGD("Invalid audio input format %d.", *pFormat);
+    if (pFormat == 0 || *pFormat != AUDIO_HW_IN_FORMAT) {
         *pFormat = AUDIO_HW_IN_FORMAT;
         return BAD_VALUE;
     }
-
+    if (pRate == 0) {
+        return BAD_VALUE;
+    }
     uint32_t rate = AudioHardware::getInputSampleRate(*pRate);
     if (rate != *pRate) {
-        LOGD("Invalid audio input sample rate %d.", *pRate);
         *pRate = rate;
         return BAD_VALUE;
     }
 
-    if (*pChannels != AudioSystem::CHANNEL_IN_MONO &&
-        *pChannels != AudioSystem::CHANNEL_IN_STEREO) {
-        LOGD("Invalid audio input channels %d.", *pChannels);
+    if (pChannels == 0 || (*pChannels != AudioSystem::CHANNEL_IN_MONO &&
+        *pChannels != AudioSystem::CHANNEL_IN_STEREO)) {
         *pChannels = AUDIO_HW_IN_CHANNELS;
         return BAD_VALUE;
     }
 
     mHardware = hw;
 
-    LOGD("AudioStreamInALSA::set(%d, %d, %u)", *pFormat, *pChannels, *pRate);
+    LOGV("AudioStreamInALSA::set(%d, %d, %u)", *pFormat, *pChannels, *pRate);
 
-    BufferProvider *bufferProvider = this;
+    mBufferSize = getBufferSize(*pRate, AudioSystem::popCount(*pChannels));
     mDevices = devices;
-    mInputChannels = AUDIO_HW_IN_CHANNELS;
-    mInputChannelCount = 2;
     mChannels = *pChannels;
     mChannelCount = AudioSystem::popCount(mChannels);
-    delete mChannelMixer;
-    mChannelMixer = NULL;
-    if (mChannels != AUDIO_HW_IN_CHANNELS) {
-        mChannelMixer = new AudioHardware::ChannelMixer(mChannelCount,
-                                    mInputChannelCount, AUDIO_HW_IN_PERIOD_SZ, this);
-        status_t status = mChannelMixer->initCheck();
-        if (status != NO_ERROR) {
-            delete mChannelMixer;
-            LOGW("AudioStreamInALSA::set() channel mixer init failed: %d", status);
-            return status;
-        }
-
-        bufferProvider = mChannelMixer;
-        if (!mPcmIn)
-            mPcmIn = new int16_t[AUDIO_HW_IN_PERIOD_SZ * mInputChannelCount];
-        if (!mPcmIn)
-            return NO_MEMORY;
-    }
-    mBufferSize = getBufferSize(rate, mChannelCount);
     mSampleRate = rate;
-    delete mDownSampler;
-    mDownSampler = NULL;
-    if (mSampleRate != AUDIO_HW_IN_SAMPLERATE) {
+    if (mSampleRate != AUDIO_HW_OUT_SAMPLERATE) {
         mDownSampler = new AudioHardware::DownSampler(mSampleRate,
                                                   mChannelCount,
                                                   AUDIO_HW_IN_PERIOD_SZ,
-                                                  bufferProvider);
+                                                  this);
         status_t status = mDownSampler->initCheck();
         if (status != NO_ERROR) {
             delete mDownSampler;
@@ -1460,10 +1488,7 @@ status_t AudioHardware::AudioStreamInALSA::set(
             return status;
         }
 
-        if (!mPcmIn)
-            mPcmIn = new int16_t[AUDIO_HW_IN_PERIOD_SZ * mInputChannelCount];
-        if (!mPcmIn)
-            return NO_MEMORY;
+        mPcmIn = new int16_t[AUDIO_HW_IN_PERIOD_SZ * mChannelCount];
     }
     return NO_ERROR;
 }
@@ -1471,12 +1496,12 @@ status_t AudioHardware::AudioStreamInALSA::set(
 AudioHardware::AudioStreamInALSA::~AudioStreamInALSA()
 {
     standby();
-    if (mDownSampler != NULL)
+    if (mDownSampler != NULL) {
         delete mDownSampler;
-    if (mChannelMixer != NULL)
-        delete mChannelMixer;
-    if (mPcmIn != NULL)
-        delete[] mPcmIn;
+        if (mPcmIn != NULL) {
+            delete[] mPcmIn;
+        }
+    }
 }
 
 ssize_t AudioHardware::AudioStreamInALSA::read(void* buffer, ssize_t bytes)
@@ -1492,10 +1517,6 @@ ssize_t AudioHardware::AudioStreamInALSA::read(void* buffer, ssize_t bytes)
         // which is the only condition when mSleepReq would be true.
         usleep(10000);
     }
-
-    // bump thread priority to speed up mutex acquisition
-    int  priority = getpriority(PRIO_PROCESS, 0);
-    setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_URGENT_AUDIO);
 
     { // scope for the lock
         AutoMutex lock(mLock);
@@ -1563,19 +1584,6 @@ ssize_t AudioHardware::AudioStreamInALSA::read(void* buffer, ssize_t bytes)
             } while ((framesIn < frames) && mReadStatus == 0);
             ret = mReadStatus;
             bytes = framesIn * frameSize();
-        } else if (mChannelMixer != NULL) {
-            size_t frames = bytes / frameSize();
-            size_t framesIn = 0;
-            mReadStatus = 0;
-            do {
-                size_t outframes = frames - framesIn;
-                mChannelMixer->mix(
-                        (int16_t *)buffer + (framesIn * mChannelCount),
-                        &outframes);
-                framesIn += outframes;
-            } while ((framesIn < frames) && mReadStatus == 0);
-            ret = mReadStatus;
-            bytes = framesIn * frameSize();
         } else {
             TRACE_DRIVER_IN(DRV_PCM_READ)
             ret = pcm_read(mPcm, buffer, bytes);
@@ -1583,7 +1591,6 @@ ssize_t AudioHardware::AudioStreamInALSA::read(void* buffer, ssize_t bytes)
         }
 
         if (ret == 0) {
-            setpriority(PRIO_PROCESS, 0, priority);
             return bytes;
         }
 
@@ -1591,9 +1598,8 @@ ssize_t AudioHardware::AudioStreamInALSA::read(void* buffer, ssize_t bytes)
         status = ret;
     }
 
-    setpriority(PRIO_PROCESS, 0, priority);
-
 Error:
+
     standby();
 
     // Simulate audio output timing in case of error
@@ -1637,6 +1643,7 @@ void AudioHardware::AudioStreamInALSA::close_l()
     if (mMixer) {
         mHardware->closeMixer_l();
         mMixer = NULL;
+        mRouteCtl = NULL;
     }
 
     if (mPcm) {
@@ -1650,6 +1657,9 @@ void AudioHardware::AudioStreamInALSA::close_l()
 status_t AudioHardware::AudioStreamInALSA::open_l()
 {
     unsigned flags = PCM_IN;
+    if (mChannels == AudioSystem::CHANNEL_IN_MONO) {
+        flags |= PCM_MONO;
+    }
     flags |= (AUDIO_HW_IN_PERIOD_MULT - 1) << PCM_PERIOD_SZ_SHIFT;
     flags |= (AUDIO_HW_IN_PERIOD_CNT - PCM_PERIOD_CNT_MIN)
             << PCM_PERIOD_CNT_SHIFT;
@@ -1673,11 +1683,20 @@ status_t AudioHardware::AudioStreamInALSA::open_l()
     }
 
     mMixer = mHardware->openMixer_l();
+    if (mMixer) {
+        TRACE_DRIVER_IN(DRV_MIXER_GET)
+        mRouteCtl = mixer_get_control(mMixer, "Capture MIC Path", 0);
+        TRACE_DRIVER_OUT
+    }
 
     if (mHardware->mode() != AudioSystem::MODE_IN_CALL) {
-        uint32_t route = mHardware->getInputRouteFromDevice(mDevices);
-        LOGV("read() wakeup setting route %d", route);
-        mHardware->setAudioRoute(ROUTE_INPUT, route);
+        const char *route = mHardware->getInputRouteFromDevice(mDevices);
+        LOGV("read() wakeup setting route %s", route);
+        if (mRouteCtl) {
+            TRACE_DRIVER_IN(DRV_MIXER_SEL)
+            mixer_ctl_select(mRouteCtl, route);
+            TRACE_DRIVER_OUT
+        }
     }
 
     return NO_ERROR;
@@ -1739,6 +1758,16 @@ status_t AudioHardware::AudioStreamInALSA::setParameters(const String8& keyValue
         AutoMutex lock(mLock);
         mSleepReq = false;
 
+        if (param.getInt(String8(AudioParameter::keyInputSource), value) == NO_ERROR) {
+            AutoMutex hwLock(mHardware->lock());
+
+            mHardware->openMixer_l();
+            mHardware->setInputSource_l((audio_source)value);
+            mHardware->closeMixer_l();
+
+            param.remove(String8(AudioParameter::keyInputSource));
+        }
+
         if (param.getInt(String8(AudioParameter::keyRouting), value) == NO_ERROR)
         {
             if (value != 0) {
@@ -1789,7 +1818,7 @@ status_t AudioHardware::AudioStreamInALSA::getNextBuffer(AudioHardware::BufferPr
 
     if (mInPcmInBuf == 0) {
         TRACE_DRIVER_IN(DRV_PCM_READ)
-        mReadStatus = pcm_read(mPcm,(void*) mPcmIn, AUDIO_HW_IN_PERIOD_BYTES);
+        mReadStatus = pcm_read(mPcm,(void*) mPcmIn, AUDIO_HW_IN_PERIOD_SZ * frameSize());
         TRACE_DRIVER_OUT
         if (mReadStatus != 0) {
             buffer->raw = NULL;
@@ -1800,7 +1829,7 @@ status_t AudioHardware::AudioStreamInALSA::getNextBuffer(AudioHardware::BufferPr
     }
 
     buffer->frameCount = (buffer->frameCount > mInPcmInBuf) ? mInPcmInBuf : buffer->frameCount;
-    buffer->i16 = mPcmIn + (AUDIO_HW_IN_PERIOD_SZ - mInPcmInBuf) * mInputChannelCount;
+    buffer->i16 = mPcmIn + (AUDIO_HW_IN_PERIOD_SZ - mInPcmInBuf) * mChannelCount;
 
     return mReadStatus;
 }
@@ -2016,7 +2045,7 @@ AudioHardware::DownSampler::DownSampler(uint32_t outSampleRate,
        mTmp2Left(NULL), mTmp2Right(NULL), mOutLeft(NULL), mOutRight(NULL)
 
 {
-    LOGD("AudioHardware::DownSampler() cstor %p SR %d channels %d frames %d",
+    LOGV("AudioHardware::DownSampler() cstor %p SR %d channels %d frames %d",
          this, mSampleRate, mChannelCount, mFrameCount);
 
     if (mSampleRate != 8000 && mSampleRate != 11025 && mSampleRate != 16000 &&
@@ -2070,7 +2099,7 @@ int AudioHardware::DownSampler::resample(int16_t* out, size_t *outFrameCount)
     }
 
     int16_t *outLeft = mTmp2Left;
-    int16_t *outRight = mTmp2Right;
+    int16_t *outRight = mTmp2Left;
     if (mSampleRate == 22050) {
         outLeft = mTmpLeft;
         outRight = mTmpRight;
@@ -2213,94 +2242,11 @@ int AudioHardware::DownSampler::resample(int16_t* out, size_t *outFrameCount)
     return 0;
 }
 
-//------------------------------------------------------------------------------
-//  Channel mixer
-//------------------------------------------------------------------------------
 
-AudioHardware::ChannelMixer::ChannelMixer(uint32_t outChannelCount,
-                                    uint32_t channelCount,
-                                    uint32_t frameCount,
-                                    AudioHardware::BufferProvider* provider)
-    :  mStatus(NO_INIT), mProvider(provider), mOutChannelCount(outChannelCount),
-       mChannelCount(channelCount)
-{
-    LOGV("AudioHardware::ChannelMixer() cstor %p channels %d frames %d",
-         this, mChannelCount, frameCount);
 
-    if (outChannelCount != 1 || channelCount != 2) {
-        LOGE("AudioHardware::ChannelMixer cstor: bad conversion: %d => %d",
-                                                mChannelCount, outChannelCount);
-        return;
-    }
 
-    mStatus = NO_ERROR;
-}
 
-status_t AudioHardware::ChannelMixer::getNextBuffer(AudioHardware::BufferProvider::Buffer* buffer)
-{
-    status_t ret;
 
-    if (!mProvider)
-        return NO_INIT;
-
-    ret = mProvider->getNextBuffer(buffer);
-    if (ret != 0) {
-        LOGE("%s: mProvider->getNextBuffer() failed (%d)", __func__, ret);
-        return ret;
-    }
-    if (!buffer->raw)
-        return NO_ERROR;
-
-    short *in = buffer->i16;
-    short *out = buffer->i16;
-    for (unsigned int i = 0; i < buffer->frameCount; ++i, ++out, in += 2)
-        out[0] = (in[0] + in[1]) / 2;
-
-    return NO_ERROR;
-}
-
-void AudioHardware::ChannelMixer::releaseBuffer(Buffer* buffer)
-{
-    if (mProvider)
-        mProvider->releaseBuffer(buffer);
-}
-
-int AudioHardware::ChannelMixer::mix(int16_t* out, size_t *outFrameCount)
-{
-    if (mStatus != NO_ERROR) {
-        return mStatus;
-    }
-
-    if (out == NULL || outFrameCount == NULL) {
-        return BAD_VALUE;
-    }
-
-    int remaingFrames = *outFrameCount;
-    while (remaingFrames) {
-        AudioHardware::BufferProvider::Buffer buf;
-        buf.frameCount = remaingFrames;
-
-        int ret = mProvider->getNextBuffer(&buf);
-        if (ret || buf.raw == NULL) {
-            *outFrameCount -= remaingFrames;
-            return ret;
-        }
-
-        remaingFrames -= buf.frameCount;
-
-        int framesRead = buf.frameCount;
-        int16_t *inBuf = buf.i16;
-        while (framesRead--) {
-            out[0] = (int16_t)(((int32_t)inBuf[0] + (int32_t)inBuf[1]) / 2);
-            out += 1;
-            inBuf += 2;
-        }
-
-        mProvider->releaseBuffer(&buf);
-    }
-
-    return 0;
-}
 
 //------------------------------------------------------------------------------
 //  Factory

@@ -1,6 +1,6 @@
 LOCAL_PATH:= $(call my-dir)
 
-ifneq ($(filter spica,$(TARGET_DEVICE)),)
+ifneq ($(filter s3c6410,$(TARGET_DEVICE)),)
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES:= aplay.c alsa_pcm.c alsa_mixer.c
@@ -29,7 +29,7 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
 LOCAL_SRC_FILES := AudioHardware.cpp alsa_mixer.c alsa_pcm.c
-LOCAL_MODULE := audio.primary.spica
+LOCAL_MODULE := audio.primary.s3c6410
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_MODULE_TAGS := optional
 LOCAL_WHOLE_STATIC_LIBRARIES := libaudiohw_legacy

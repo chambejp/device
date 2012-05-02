@@ -60,7 +60,7 @@ private:
     SensorBase* mSensors[numSensorDrivers];
 
     int handleToDriver(int handle) const {
-        LOGE("trm nusensor: handleToDriver ");
+ //       LOGE("trm nusensor: handleToDriver ");
         switch (handle) {
             case ID_A:
             case ID_M:
@@ -79,7 +79,7 @@ private:
 
 sensors_poll_context_t::sensors_poll_context_t()
 {
-          LOGE("trm nusensor: sensors_poll_context_t ");
+  //        LOGE("trm nusensor: sensors_poll_context_t ");
     mSensors[light] = new LightSensor();
     mPollFds[light].fd = mSensors[light]->getFd();
     mPollFds[light].events = POLLIN;
@@ -108,7 +108,7 @@ sensors_poll_context_t::sensors_poll_context_t()
 }
 
 sensors_poll_context_t::~sensors_poll_context_t() {
-          LOGE("trm nusensor: ~sensors_poll_context_t ");
+  //        LOGE("trm nusensor: ~sensors_poll_context_t ");
     for (int i=0 ; i<numSensorDrivers ; i++) {
         delete mSensors[i];
     }
@@ -117,11 +117,11 @@ sensors_poll_context_t::~sensors_poll_context_t() {
 }
 
 int sensors_poll_context_t::activate(int handle, int enabled) {
-          LOGE("trm nusensor: sensors_poll_context_t, activate, handle %x ",handle);
+  //        LOGE("trm nusensor: sensors_poll_context_t, activate, handle %x ",handle);
     int index = handleToDriver(handle);
     if (index < 0) return index;
     int err =  mSensors[index]->enable(handle, enabled);
-          LOGE("trm nusensor: sensors_poll_context_t, activate, err %x ",err);
+  //        LOGE("trm nusensor: sensors_poll_context_t, activate, err %x ",err);
     if (enabled && !err) {
         const char wakeMessage(WAKE_MESSAGE);
         int result = write(mWritePipeFd, &wakeMessage, 1);
@@ -131,7 +131,7 @@ int sensors_poll_context_t::activate(int handle, int enabled) {
 }
 
 int sensors_poll_context_t::setDelay(int handle, int64_t ns) {
-          LOGE("trm nusensor: sensors_poll_context_t, setDelay ");
+   //       LOGE("trm nusensor: sensors_poll_context_t, setDelay ");
 
     int index = handleToDriver(handle);
     if (index < 0) return index;
@@ -145,7 +145,7 @@ int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
 
     do {
         // see if we have some leftover from the last poll()
-        LOGE("trm nusensor: sensors_poll_context_t, pollEvents ");
+      //  LOGE("trm nusensor: sensors_poll_context_t, pollEvents ");
         for (int i=0 ; count && i<numSensorDrivers ; i++) {
             SensorBase* const sensor(mSensors[i]);
             if ((mPollFds[i].revents & POLLIN) || (sensor->hasPendingEvents())) {
@@ -180,7 +180,7 @@ int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
         // if we have events and space, go read them
     } while (n && count);
 
-        LOGE("trm nusensor: sensors_poll_context_t, pollEvents: nbEvents %d ", nbEvents);
+     //   LOGE("trm nusensor: sensors_poll_context_t, pollEvents: nbEvents %d ", nbEvents);
     return nbEvents;
 }
 
@@ -188,7 +188,7 @@ int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
 
 static int poll__close(struct hw_device_t *dev)
 {
-          LOGE("trm nusensor: poll_close ");
+       //   LOGE("trm nusensor: poll_close ");
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
     if (ctx) {
         delete ctx;
@@ -198,21 +198,21 @@ static int poll__close(struct hw_device_t *dev)
 
 static int poll__activate(struct sensors_poll_device_t *dev,
         int handle, int enabled) {
-          LOGE("trm nusensor: poll_activate ");
+    //      LOGE("trm nusensor: poll_activate ");
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
     return ctx->activate(handle, enabled);
 }
 
 static int poll__setDelay(struct sensors_poll_device_t *dev,
         int handle, int64_t ns) {
-          LOGE("trm nusensor: poll_setDelay ");
+    //      LOGE("trm nusensor: poll_setDelay ");
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
     return ctx->setDelay(handle, ns);
 }
 
 static int poll__poll(struct sensors_poll_device_t *dev,
         sensors_event_t* data, int count) {
-          LOGE("trm nusensor: poll_poll: count %x ", count);
+    //      LOGE("trm nusensor: poll_poll: count %x ", count);
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
     return ctx->pollEvents(data, count);
 }
@@ -221,7 +221,7 @@ static int poll__poll(struct sensors_poll_device_t *dev,
 
 int init_nusensors(hw_module_t const* module, hw_device_t** device)
 {
-          LOGE("trm nusensor: init_nusensors ");
+    //      LOGE("trm nusensor: init_nusensors ");
     int status = -EINVAL;
 
     sensors_poll_context_t *dev = new sensors_poll_context_t();

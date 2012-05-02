@@ -70,10 +70,7 @@ struct mixer_ctl *mixer_get_control(struct mixer *mixer,
                                     const char *name, unsigned index);
 struct mixer_ctl *mixer_get_nth_control(struct mixer *mixer, unsigned n);
 
-#define CTL_VALUE_RAW	(0x80000000)
-#define CTL_VALUE_MASK	(0x00FFFFFF)
 int mixer_ctl_set(struct mixer_ctl *ctl, unsigned percent);
-
 int mixer_ctl_select(struct mixer_ctl *ctl, const char *value);
 void mixer_ctl_print(struct mixer_ctl *ctl);
 

@@ -316,9 +316,6 @@ int mixer_ctl_set(struct mixer_ctl *ctl, unsigned percent)
 {
     struct snd_ctl_elem_value ev;
     unsigned n;
-    int raw = percent & CTL_VALUE_RAW;
-
-    percent &= CTL_VALUE_MASK;
 
     memset(&ev, 0, sizeof(ev));
     ev.id.numid = ctl->info->id.numid;
@@ -328,21 +325,13 @@ int mixer_ctl_set(struct mixer_ctl *ctl, unsigned percent)
             ev.value.integer.value[n] = !!percent;
         break;
     case SNDRV_CTL_ELEM_TYPE_INTEGER: {
-        long value;
-	if (!raw)
-		value = scale_int(ctl->info, percent);
-	else
-		value = percent;
+        long value = scale_int(ctl->info, percent);
         for (n = 0; n < ctl->info->count; n++)
             ev.value.integer.value[n] = value;
         break;
     }
     case SNDRV_CTL_ELEM_TYPE_INTEGER64: {
-        long long value;
-	if (!raw)
-		value = scale_int64(ctl->info, percent);
-	else
-		value = percent;
+        long long value = scale_int64(ctl->info, percent);
         for (n = 0; n < ctl->info->count; n++)
             ev.value.integer64.value[n] = value;
         break;

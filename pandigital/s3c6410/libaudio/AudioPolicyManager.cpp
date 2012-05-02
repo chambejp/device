@@ -15,14 +15,14 @@
  */
 
 #define LOG_TAG "AudioPolicyManager"
-//#define LOG_NDEBUG 0
+#define LOG_NDEBUG 0
 #include <utils/Log.h>
 #include "AudioPolicyManager.h"
 #include <media/mediarecorder.h>
 
 namespace android_audio_legacy {
 
-
+using namespace android;
 
 // ----------------------------------------------------------------------------
 // AudioPolicyManager for crespo platform

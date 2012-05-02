@@ -15,3 +15,6 @@
 #
 
 PRODUCT_MAKEFILES := $(LOCAL_DIR)/full_s3c6410.mk
+
+subdir_makefiles := \
+        $(LOCAL_PATH)/libsensors/Android.mk \

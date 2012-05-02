@@ -29,7 +29,11 @@ PRODUCT_COPY_FILES := \
 	frameworks/base/data/etc/android.hardware.usb.accessory.xml:system/etc/permissions/android.hardware.usb.accessory.xml \
 	device/pandigital/s3c6410/egl.cfg:system/lib/egl/egl.cfg \
 	device/pandigital/s3c6410/vold.fstab:system/etc/vold.fstab \
-	device/pandigital/s3c6410/lights.s3c6410.so:system/lib/hw/lights.s3c6410.so \
+	device/pandigital/s3c6410/prebuilt/lights.s3c6410.so:system/lib/hw/lights.s3c6410.so \
+        device/pandigital/s3c6410/prebuilt/libaudio.so:obj/lib/libaudio.so \
+        device/pandigital/s3c6410/prebuilt/libaudiopolicy.so:obj/lib/libaudiopolicy.so \
+        device/pandigital/s3c6410/prebuilt/libaudio.so:system/lib/libaudio.so \
+        device/pandigital/s3c6410/prebuilt/libaudiopolicy.so:system/lib/libaudiopolicy.so \
 	device/pandigital/s3c6410/Wireless/RT2870STA/RT2870STA.dat:system/etc/Wireless/RT2870STA/RT2870STA.dat
 	
 # Prebuilt kl keymaps
@@ -89,7 +93,8 @@ PRODUCT_PACKAGES += \
     libGLES_fimg \
     hwcomposer.default \
     audio_policy.default \
-    librs_jni
+    librs_jni \
+    sensors.s3c6410 \
 
 
 #These are the hardware-specific features

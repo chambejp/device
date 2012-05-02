@@ -1,0 +1,47 @@
+<resources>
+    <bool name="config_hardwareAccelerated">false</bool>
+    <bool name="config_defaultAutoRotate">true</bool>
+    <bool name="config_cyanogenmod">true</bool>
+    <integer name="config_dragAppsCustomizeIconFadeInDuration">50</integer>
+    <integer name="config_dragAppsCustomizeIconFadeOutDuration">50</integer>
+    <integer name="config_workspaceUnshrinkTime">50</integer>
+
+    <!-- When items are dropped on the mini screens in customize mode, we have a bounce animation
+         of the bright green hover outline, and then fade out the outline at the end. These are
+         the values used in that animation -->
+    <integer name="config_screenOnDropScalePercent">120</integer>
+    <integer name="config_screenOnDropScaleUpDuration">50</integer>
+    <integer name="config_screenOnDropScaleDownDuration">50</integer>
+    <integer name="config_screenOnDropAlphaFadeDelay">50</integer>
+    <integer name="config_screenOnDropAlphaFadeDuration">50</integer>
+
+    <!-- Fade/zoom in/out duration & scale in the AllApps transition.
+         Note: This should be less than the workspaceShrinkTime as they happen together. -->
+    <integer name="config_appsCustomizeZoomInTime">20</integer>
+    <integer name="config_appsCustomizeZoomOutTime">20</integer>
+    <integer name="config_appsCustomizeZoomScaleFactor">0</integer>
+    <integer name="config_appsCustomizeFadeInTime">20</integer>
+    <integer name="config_appsCustomizeFadeOutTime">20</integer>
+    <integer name="config_appsCustomizeWorkspaceShrinkTime">30</integer>
+    <integer name="config_appsCustomizeWorkspaceAnimationStagger">40</integer>
+    <integer name="config_workspaceAppsCustomizeAnimationStagger">100</integer>
+
+    <!-- Tab transition animation duration -->
+    <integer name="config_tabTransitionDuration">20</integer>
+
+    <!-- The transition duration for the background of the drop targets -->
+    <integer name="config_dropTargetBgTransitionDuration">50</integer>
+
+    <integer name="config_crosshairsFadeInTime">100</integer>
+
+    <!-- The duration (in ms) of the fade animation on the object outlines, used when
+         we are dragging objects around on the home screen. -->
+    <integer name="config_dragOutlineFadeTime">450</integer>
+
+    <!-- Parameters controlling the animation for when an item is dropped on the home screen,
+         and it animates from its old position to the new one. -->
+    <integer name="config_dropAnimMaxDuration">100</integer>
+
+
+</resources>
+

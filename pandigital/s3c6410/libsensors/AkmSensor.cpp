@@ -328,7 +328,7 @@ int AkmSensor::readEvents(sensors_event_t* data, int count)
    
         } else {
  //           LOGE("AkmSensor: unknown event (type=%d, code=%d)",
-                    type, event->code);
+ //                   type, event->code);
             mInputReader.next();
         }
     }
@@ -388,4 +388,3 @@ void AkmSensor::processEvent(int code, int value)
             break;
     }
 }
-

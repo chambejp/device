@@ -24,14 +24,13 @@
   <item name="wifi.on">4</item>
   <item name="wifi.active">120</item>
   <item name="wifi.scan">220</item>
-  <item name="dsp.audio">88</item>
-  <item name="dsp.video">88</item>
+  <item name="dsp.audio">30</item>
+  <item name="dsp.video">30</item>
   <item name="radio.active">0</item>
   <item name="battery.capacity">1600</item>
   <item name="radio.scanning">0</item>
   <array name="radio.on"> <!-- Strength 0 to BINS-1 -->
-      <value>3.4</value>
-      <value>3.4</value>
+      <value>0</value>
   </array>
   <array name="cpu.speeds">
     <value>800000</value>

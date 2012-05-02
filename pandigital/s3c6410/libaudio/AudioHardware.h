@@ -26,6 +26,8 @@
 #include <hardware_legacy/AudioHardwareBase.h>
 #include <media/mediarecorder.h>
 
+#include "secril-client.h"
+
 extern "C" {
     struct pcm;
     struct mixer;
@@ -33,15 +35,10 @@ extern "C" {
 };
 
 namespace android_audio_legacy {
-	using android::sp;
-	using android::SortedVector;
-	using android::Mutex;
-	using android::RefBase;
-	using android::AutoMutex;
 
 // TODO: determine actual audio DSP and hardware latency
 // Additionnal latency introduced by audio DSP and hardware in ms
-#define AUDIO_HW_OUT_LATENCY_MS 23219
+#define AUDIO_HW_OUT_LATENCY_MS 0
 // Default audio output sample rate
 #define AUDIO_HW_OUT_SAMPLERATE 44100
 // Default audio output channel mask
@@ -56,19 +53,21 @@ namespace android_audio_legacy {
 #define AUDIO_HW_OUT_PERIOD_BYTES (AUDIO_HW_OUT_PERIOD_SZ * 2 * sizeof(int16_t))
 
 // Default audio input sample rate
-#define AUDIO_HW_IN_SAMPLERATE 44100
+#define AUDIO_HW_IN_SAMPLERATE 8000
 // Default audio input channel mask
-#define AUDIO_HW_IN_CHANNELS (AudioSystem::CHANNEL_IN_STEREO)
+#define AUDIO_HW_IN_CHANNELS (AudioSystem::CHANNEL_IN_MONO)
 // Default audio input sample format
 #define AUDIO_HW_IN_FORMAT (AudioSystem::PCM_16_BIT)
 // Number of buffers in audio driver for input
-//#define AUDIO_HW_NUM_IN_BUF 2
+#define AUDIO_HW_NUM_IN_BUF 2
 // Kernel pcm in buffer size in frames at 44.1kHz (before resampling)
-#define AUDIO_HW_IN_PERIOD_MULT 8  // (8 * 128 = 1024 frames)
+#define AUDIO_HW_IN_PERIOD_MULT 16  // (16 * 128 = 2048 frames)
 #define AUDIO_HW_IN_PERIOD_SZ (PCM_PERIOD_SZ_MIN * AUDIO_HW_IN_PERIOD_MULT)
-#define AUDIO_HW_IN_PERIOD_CNT 4
-// Default audio input buffer size in bytes
-#define AUDIO_HW_IN_PERIOD_BYTES (AUDIO_HW_IN_PERIOD_SZ * 2 * sizeof(int16_t))
+#define AUDIO_HW_IN_PERIOD_CNT 2
+// Default audio input buffer size in bytes (8kHz mono)
+#define AUDIO_HW_IN_PERIOD_BYTES ((AUDIO_HW_IN_PERIOD_SZ*sizeof(int16_t))/8)
+
+using namespace android;
 
 class AudioHardware : public AudioHardwareBase
 {
@@ -112,109 +111,42 @@ public:
     virtual size_t getInputBufferSize(
         uint32_t sampleRate, int format, int channelCount);
 
-    int  mode() { return mMode; }
-    uint32_t getOutputRouteFromDevice(uint32_t device);
-    uint32_t getInputRouteFromDevice(uint32_t device);
-    uint32_t getVoiceOutRouteFromDevice(uint32_t device);
-    uint32_t getVoiceInRouteFromDevice(uint32_t device);
+            int  mode() { return mMode; }
+            const char *getOutputRouteFromDevice(uint32_t device);
+            const char *getInputRouteFromDevice(uint32_t device);
+            const char *getVoiceRouteFromDevice(uint32_t device);
 
-    status_t setIncallPath_l(uint32_t device);
+            status_t setIncallPath_l(uint32_t device);
 
-    void setVoiceVolume_l(float volume);
+            status_t setInputSource_l(audio_source source);
+
+            void setVoiceVolume_l(float volume);
 
     static uint32_t    getInputSampleRate(uint32_t sampleRate);
-    sp <AudioStreamInALSA> getActiveInput_l();
+           sp <AudioStreamInALSA> getActiveInput_l();
 
-    Mutex& lock() { return mLock; }
+           Mutex& lock() { return mLock; }
 
-    struct pcm *openPcmOut_l();
-    void closePcmOut_l();
+           struct pcm *openPcmOut_l();
+           void closePcmOut_l();
 
-    struct mixer *openMixer_l();
-    void closeMixer_l();
+           struct mixer *openMixer_l();
+           void closeMixer_l();
 
-    sp <AudioStreamOutALSA>  output() { return mOutput; }
-
-    /* Audio routing */
-    enum PinType {
-        TYPE_NONE = 0,
-        TYPE_BOOL = 1,
-        TYPE_INT,
-        TYPE_MUX
-    };
-
-    enum AudioInput {
-        INPUT_MIC_MAIN = 1,
-        INPUT_MIC_SUB,
-        INPUT_HEADSET,
-        INPUT_PHONE,
-        INPUT_BT,
-        INPUT_COUNT
-    };
-
-    enum AudioOutput {
-        OUTPUT_RCV = 1,
-        OUTPUT_SPK,
-        OUTPUT_HP,
-        OUTPUT_SPK_HP,
-        OUTPUT_BT,
-        OUTPUT_COUNT
-    };
-
-    enum AudioVoiceOut {
-        VOICE_OUT_RCV = 1,
-        VOICE_OUT_SPK,
-        VOICE_OUT_HP,
-        VOICE_OUT_BT,
-        VOICE_OUT_COUNT
-    };
-
-    enum AudioVoiceIn {
-        VOICE_IN_MIC_MAIN = 1,
-        VOICE_IN_MIC_SUB,
-        VOICE_IN_HEADSET,
-        VOICE_IN_BT,
-        VOICE_COUNT
-    };
-
-    enum RouteType {
-        ROUTE_INPUT = 0,
-        ROUTE_OUTPUT,
-        ROUTE_VOICE_IN,
-        ROUTE_VOICE_OUT,
-        ROUTE_COUNT
-    };
-
-    #define AUDIO_PIN_CONFIG_TERMINATOR \
-                                    { NULL, AudioHardware::TYPE_NONE, NULL, 0 }
-    struct AudioPinConfig {
-        const char *ctl;
-        PinType type;
-        const char *strValue;
-        uint32_t intValue;
-    };
-
-    #define AUDIO_ROUTE_CONFIG_TERMINATOR   { 0, NULL }
-    struct AudioRouteConfig {
-        uint32_t                route;
-        const AudioPinConfig    *config;
-    };
+           sp <AudioStreamOutALSA>  output() { return mOutput; }
 
 protected:
     virtual status_t dump(int fd, const Vector<String16>& args);
 
 private:
-    /* Audio routing */
-    static const AudioPinConfig initialPinConfig[];
-    static const AudioRouteConfig *routeTables[ROUTE_COUNT];
 
-    uint32_t mRoute[ROUTE_COUNT];
-    uint32_t mInputRoute;
-    uint32_t mVoiceInRoute;
+    enum tty_modes {
+        TTY_MODE_OFF,
+        TTY_MODE_VCO,
+        TTY_MODE_HCO,
+        TTY_MODE_FULL
+    };
 
-    void setAudioRoute(RouteType type, uint32_t route);
-
-    /* Android audio interface */
     bool            mInit;
     bool            mMicMute;
     sp <AudioStreamOutALSA>                 mOutput;
@@ -226,16 +158,28 @@ private:
     uint32_t        mMixerOpenCnt;
     bool            mInCallAudioMode;
     float           mVoiceVol;
-    float           mMasterVol;
 
     audio_source    mInputSource;
     bool            mBluetoothNrec;
+    int             mTTYMode;
+
+    void*           mSecRilLibHandle;
+    HRilClient      mRilClient;
+    bool            mActivatedCP;
+    HRilClient      (*openClientRILD)  (void);
+    int             (*disconnectRILD)  (HRilClient);
+    int             (*closeClientRILD) (HRilClient);
+    int             (*isConnectedRILD) (HRilClient);
+    int             (*connectRILD)     (HRilClient);
+    int             (*setCallVolume)   (HRilClient, SoundType, int);
+    int             (*setCallAudioPath)(HRilClient, AudioPath);
+    int             (*setCallClockSync)(HRilClient, SoundClockCondition);
+    void            loadRILD(void);
+    status_t        connectRILDIfRequired(void);
 
     //  trace driver operations for dump
     int             mDriverOp;
 
-    void setMasterVolume_l(float volume);
-    void setOutputVolume(uint32_t device, uint32_t volume);
     static uint32_t         checkInputSampleRate(uint32_t sampleRate);
     static const uint32_t   inputSamplingRates[];
 
@@ -265,7 +209,7 @@ private:
         { return INVALID_OPERATION; }
         virtual ssize_t write(const void* buffer, size_t bytes);
         virtual status_t standby();
-        bool checkStandby();
+                bool checkStandby();
 
         virtual status_t dump(int fd, const Vector<String16>& args);
         virtual status_t setParameters(const String8& keyValuePairs);
@@ -273,14 +217,14 @@ private:
         uint32_t device() { return mDevices; }
         virtual status_t getRenderPosition(uint32_t *dspFrames);
 
-        void doStandby_l();
-        void close_l();
-        status_t open_l();
-        int standbyCnt() { return mStandbyCnt; }
+                void doStandby_l();
+                void close_l();
+                status_t open_l();
+                int standbyCnt() { return mStandbyCnt; }
 
-        int prepareLock();
-        void lock();
-        void unlock();
+                int prepareLock();
+                void lock();
+                void unlock();
 
     private:
 
@@ -288,6 +232,7 @@ private:
         AudioHardware* mHardware;
         struct pcm *mPcm;
         struct mixer *mMixer;
+        struct mixer_ctl *mRouteCtl;
         const char *next_route;
         bool mStandby;
         uint32_t mDevices;
@@ -321,28 +266,6 @@ private:
         virtual void releaseBuffer(Buffer* buffer) = 0;
     };
 
-    class ChannelMixer : public BufferProvider {
-    public:
-        ChannelMixer(uint32_t outChannelCount,
-                  uint32_t channelCount,
-                  uint32_t frameCount,
-                  BufferProvider* provider);
-
-        virtual ~ChannelMixer() {}
-
-        status_t initCheck() { return mStatus; }
-        int mix(int16_t* out, size_t *outFrameCount);
-
-        virtual status_t getNextBuffer(Buffer* buffer);
-        virtual void releaseBuffer(Buffer* buffer);
-
-    private:
-        status_t    mStatus;
-        BufferProvider* mProvider;
-        uint32_t mOutChannelCount;
-        uint32_t mChannelCount;
-    };
-
     class DownSampler {
     public:
         DownSampler(uint32_t outSampleRate,
@@ -352,9 +275,9 @@ private:
 
         virtual ~DownSampler();
 
-        void reset();
-        status_t initCheck() { return mStatus; }
-        int resample(int16_t* out, size_t *outFrameCount);
+                void reset();
+                status_t initCheck() { return mStatus; }
+                int resample(int16_t* out, size_t *outFrameCount);
 
     private:
         status_t    mStatus;
@@ -402,6 +325,9 @@ private:
         virtual status_t setParameters(const String8& keyValuePairs);
         virtual String8 getParameters(const String8& keys);
         virtual unsigned int getInputFramesLost() const { return 0; }
+        virtual status_t addAudioEffect(effect_handle_t effect) { return NO_ERROR; };
+        virtual status_t removeAudioEffect(effect_handle_t effect) { return NO_ERROR; };
+
         uint32_t device() { return mDevices; }
         void doStandby_l();
         void close_l();
@@ -414,9 +340,6 @@ private:
         virtual status_t getNextBuffer(BufferProvider::Buffer* buffer);
         virtual void releaseBuffer(BufferProvider::Buffer* buffer);
 
-        virtual status_t addAudioEffect(effect_handle_t effect) { return BAD_VALUE; }
-        virtual status_t removeAudioEffect(effect_handle_t effect) { return BAD_VALUE; }
-
         int prepareLock();
         void lock();
         void unlock();
@@ -426,17 +349,15 @@ private:
         AudioHardware* mHardware;
         struct pcm *mPcm;
         struct mixer *mMixer;
+        struct mixer_ctl *mRouteCtl;
         const char *next_route;
         bool mStandby;
         uint32_t mDevices;
-        uint32_t mInputChannels;
         uint32_t mChannels;
-        uint32_t mInputChannelCount;
         uint32_t mChannelCount;
         uint32_t mSampleRate;
         size_t mBufferSize;
         DownSampler *mDownSampler;
-        ChannelMixer *mChannelMixer;
         status_t mReadStatus;
         size_t mInPcmInBuf;
         int16_t *mPcmIn;

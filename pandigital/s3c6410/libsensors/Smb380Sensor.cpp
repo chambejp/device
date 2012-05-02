@@ -162,7 +162,7 @@ int Smb380Sensor::readEvents(sensors_event_t* data, int count)
                 numEventReceived++;
             }
         } else {
-            LOGE("Smb380Sensor: unknown event (type=%d, code=%d)",
+  //          LOGE("Smb380Sensor: unknown event (type=%d, code=%d)",
                     type, event->code);
         }
         mInputReader.next();
